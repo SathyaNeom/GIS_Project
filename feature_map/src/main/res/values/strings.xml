@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Map Screen -->
+    <string name="map_screen_title">Electronic Services</string>
+    <string name="map_controls">Map Controls</string>
+    <string name="menu">Menu</string>
+
+    <!-- Map Actions -->
+    <string name="action_zoom_in">Zoom In</string>
+    <string name="action_zoom_out">Zoom Out</string>
+    <string name="action_fullscreen">Fullscreen</string>
+    <string name="action_exit_fullscreen">Exit Fullscreen</string>
+    <string name="action_identify">Identify</string>
+    <string name="action_layers">Layers</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_my_location">My Location</string>
+    <string name="action_measure">Measure</string>
+    <string name="zoom_in">Zoom In</string>
+    <string name="zoom_out">Zoom Out</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="exit_fullscreen">Exit Fullscreen</string>
+    <string name="identify">Identify</string>
+    <string name="layers">Layers</string>
+    <string name="clear">Clear</string>
+    <string name="my_location">My Location</string>
+    <string name="measure">Measure</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="logout">Logout</string>
+
+    <!-- Map Messages -->
+    <string name="msg_zoom_in_gesture">Zoom in feature - use pinch gestures</string>
+    <string name="msg_zoom_out_gesture">Zoom out feature - use pinch gestures</string>
+    <string name="msg_fullscreen_enabled">Fullscreen mode enabled</string>
+    <string name="msg_fullscreen_disabled">Fullscreen mode disabled</string>
+    <string name="msg_identify_tap">Tap on a feature to identify</string>
+    <string name="msg_clear_selections">Clear selections</string>
+    <string name="msg_location_not_implemented">Location feature not yet implemented</string>
+    <string name="msg_measurement_enabled">Measurement mode enabled - Tap points to measure</string>
+    <string name="msg_measurement_disabled">Measurement mode disabled</string>
+    <string name="msg_measurement_active">Measurement Mode Active</string>
+    <string name="msg_identify_mode">Identify Mode - Tap a feature</string>
+    <string name="msg_feature_identified">Feature identified at X: %1$s, Y: %2$s</string>
+    <string name="zoom_in_feature">Zoom in feature - use pinch gestures</string>
+    <string name="zoom_out_feature">Zoom out feature - use pinch gestures</string>
+    <string name="fullscreen_mode_enabled">Fullscreen mode enabled</string>
+    <string name="fullscreen_mode_disabled">Fullscreen mode disabled</string>
+    <string name="tap_on_feature">Tap on a feature to identify</string>
+    <string name="clear_selections">Clear selections</string>
+    <string name="location_feature_not_yet_implemented">Location feature not yet implemented</string>
+    <string name="measurement_mode_enabled">Measurement mode enabled - Tap points to measure</string>
+    <string name="measurement_mode_disabled">Measurement mode disabled</string>
+    <string name="measurement_mode_active">Measurement Mode Active</string>
+    <string name="identify_mode">Identify Mode - Tap a feature</string>
+
+    <!-- Coordinate Info Bar -->
+    <string name="label_accuracy">Accuracy:</string>
+    <string name="label_x">X:</string>
+    <string name="label_y">Y:</string>
+    <string name="label_elevation">Elev:</string>
+    <string name="label_scale">Scale:</string>
+    <string name="default_coordinate">--</string>
+    <string name="accuracy">Accuracy:</string>
+    <string name="x">X:</string>
+    <string name="y">Y:</string>
+    <string name="elev">Elev:</string>
+    <string name="scale">Scale:</string>
+
+    <!-- Basemap Dialog -->
+    <string name="dialog_basemap_title">Select Basemap</string>
+    <string name="basemap_streets">Streets</string>
+    <string name="basemap_imagery">Imagery</string>
+    <string name="basemap_topographic">Topographic</string>
+    <string name="basemap_light_gray">Light Gray</string>
+    <string name="basemap_dark_gray">Dark Gray</string>
+    <string name="basemap_navigation">Navigation</string>
+    <string name="basemap_oceans">Oceans</string>
+    <string name="select_basemap">Select Basemap</string>
+    <string name="streets">Streets</string>
+    <string name="imagery">Imagery</string>
+    <string name="topographic">Topographic</string>
+    <string name="light_gray">Light Gray</string>
+    <string name="dark_gray">Dark Gray</string>
+    <string name="navigation">Navigation</string>
+    <string name="oceans">Oceans</string>
+
+    <!-- Logout Dialog -->
+    <string name="dialog_logout_title">Logout Confirmation</string>
+    <string name="dialog_logout_message">Are you sure you want to logout? Any unsaved changes will be lost.</string>
+    <string name="action_logout">Logout</string>
+    <string name="logout_confirmation">Logout Confirmation</string>
+    <string name="logout_confirmation_message">Are you sure you want to logout? Any unsaved changes will be lost.</string>
+
+    <!-- CollectES Bottom Sheet -->
+    <string name="collectes_title">Choose Feature Type</string>
+    <string name="collectes_subtitle">Select feature layer to collect points.</string>
+    <string name="collectes_no_features">No feature types available</string>
+    <string name="collectes_edit_attribute">Edit Attribute</string>
+    <string name="collectes_gps">GPS</string>
+    <string name="collectes_task_desc">Enbridge Edit Attribute Task</string>
+    <string name="collectes_select_asset">Select Asset</string>
+    <string name="collectes_validation_error">Please fill all required fields</string>
+    <string name="collectes_location">Location</string>
+    <string name="collectes_saved">Saved %1$s with %2$d attributes</string>
+    <string name="saved_feature">Saved %1$s with %2$d attributes</string>
+
+    <!-- ManageES Bottom Sheet -->
+    <string name="managees_title">Get data or Post Data</string>
+    <string name="managees_subtitle">Get Data - Select a Distance around where you are standing</string>
+    <string name="managees_distance">Distance</string>
+    <string name="managees_get_data">Get Data</string>
+    <string name="managees_data_changed">Data Changed:</string>
+    <string name="managees_no_changes">No data changes</string>
+    <string name="managees_delete_jc">Delete JC</string>
+    <string name="managees_post_data">Post Data</string>
+    <string name="managees_post_success">Successfully posted Data</string>
+    <string name="managees_clicked_post">Clicked - Post data</string>
+    <string name="post_data">Clicked - Post data</string>
+
+    <!-- Delete Job Cards Dialog -->
+    <string name="dialog_delete_jc_title">Delete Job Card Info</string>
+    <string name="dialog_delete_jc_no_cards">No Job Card has been saved</string>
+    <string name="dialog_delete_jc_success">%1$d Job Card(s) deleted successfully</string>
+
+    <!-- Project Settings Bottom Sheet -->
+    <string name="projectsettings_title">Project Settings</string>
+    <string name="projectsettings_pole_type">Pole Type</string>
+    <string name="projectsettings_work_order">Work Order</string>
+    <string name="projectsettings_search_hint">Search work orders…</string>
+    <string name="projectsettings_no_work_orders">No work orders available</string>
+    <string name="projectsettings_loading">Loading project settings…</string>
+    <string name="projectsettings_error_load">Failed to load project settings</string>
+    <string name="projectsettings_error_save">Failed to save project settings</string>
+    <string name="projectsettings_save_success">Project settings saved successfully</string>
+    <string name="projectsettings_select_pole">Select Pole Type</string>
+    <string name="projectsettings_select_wo">Select Work Order</string>
+    <string name="projectsettings_search_results">Search Results (%1$d)</string>
+    <string name="projectsettings_clear_search">Clear search</string>
+    <string name="project_settings">Project Settings - Coming soon</string>
+    <string name="manage_es_edits">Manage ES Edits - Coming soon</string>
+    <string name="job_card_entry">ES Job Card Entry - Coming soon</string>
+
+    <!-- Placeholder for map view -->
+    <string name="map_view_placeholder">ArcGIS Map View</string>
+    <string name="arcgis_map_view">ArcGIS Map View</string>
+
+    <!-- Preview/Test Content -->
+    <string name="preview_es_jobcard_coming_soon">ES Job Card Entry - Coming soon</string>
+    <string name="preview_project_settings_coming_soon">Project Settings - Coming soon</string>
+    <string name="preview_manage_es_coming_soon">Manage ES Edits - Coming soon</string>
+</resources>

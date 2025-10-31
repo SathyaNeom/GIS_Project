@@ -1,0 +1,547 @@
+[
+  {
+    "id": "main_es",
+    "name": "Main_ES",
+    "geometryType": "Point",
+    "legendColor": "#E57373",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "size",
+        "label": "Size",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "1/2",
+          "3/4",
+          "1",
+          "1 1/4",
+          "1 1/2",
+          "2",
+          "2 1/2",
+          "3",
+          "4",
+          "6",
+          "8",
+          "10",
+          "12",
+          "14",
+          "16",
+          "20",
+          "24",
+          "26",
+          "30",
+          "36",
+          "38",
+          "42"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "material",
+        "label": "Material",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "CI",
+          "CU",
+          "Not Loaded",
+          "PE",
+          "SB",
+          "SC",
+          "ST",
+          "Unknown",
+          "WI"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "part_number",
+        "label": "Part Number",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "1738R",
+          "2cds3",
+          "3cs4",
+          "4WQ11"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "depth",
+        "label": "Depth",
+        "type": "NUMBER",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "asset_num",
+        "label": "Asset Num",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "meter_es",
+    "name": "Meter_ES",
+    "geometryType": "Point",
+    "legendColor": "#64B5F6",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "services_es",
+    "name": "Services_ES",
+    "geometryType": "Point",
+    "legendColor": "#FFD54F",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "depth",
+        "label": "Depth",
+        "type": "NUMBER",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "fittings_es",
+    "name": "Fittings_ES",
+    "geometryType": "Point",
+    "legendColor": "#9575CD",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "fitting",
+        "label": "Fitting",
+        "type": "DROPDOWN",
+        "isRequired": true,
+        "options": [
+          "Anode (PE)",
+          "Anode (ST)",
+          "Butt Fused PE Cap",
+          "Butt Fused Tee",
+          "Cap Weld",
+          "CB3",
+          "CB4",
+          "CB6",
+          "CB8",
+          "Compression Coupling",
+          "CVT",
+          "ECE",
+          "ECS",
+          "EFV",
+          "EFVPT",
+          "Electrofused Branch Saddle",
+          "Electrofused Punch Tee",
+          "End Cap"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "size",
+        "label": "Size",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "0.5",
+          "1",
+          "1 1/2",
+          "1 1/4",
+          "1 1/4 x 1",
+          "1 1/2 x 1/2"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "material",
+        "label": "Material",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "Other",
+          "PE",
+          "SC",
+          "ST"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "part_number",
+        "label": "Part Number",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "1738R",
+          "2cds3",
+          "3cs4",
+          "4WQ11"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "depth",
+        "label": "Depth",
+        "type": "NUMBER",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "landbase_es",
+    "name": "Landbase_ES",
+    "geometryType": "Point",
+    "legendColor": "#4DB6AC",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "point_type",
+        "label": "Point Type",
+        "type": "DROPDOWN",
+        "isRequired": true,
+        "options": [
+          "Asphalt Edge",
+          "Bollards",
+          "Building Corner Left Back",
+          "Building Corner Left Front",
+          "Building Corner Right Back",
+          "Building Corner Right Front",
+          "Building Line Left",
+          "Building Line Right",
+          "Catch Basin"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "building_corner_es",
+    "name": "Building_Corner_ES",
+    "geometryType": "Point",
+    "legendColor": "#A1887F",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "building_pt_type",
+        "label": "Building Pt Type",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "Corner",
+          "Projection"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "building_projection_es",
+    "name": "Building_Projection_ES",
+    "geometryType": "Point",
+    "legendColor": "#81C784",
+    "attributes": [
+      {
+        "id": "location",
+        "label": "Location",
+        "type": "LOCATION",
+        "isRequired": true,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "workorder",
+        "label": "Work order",
+        "type": "TEXT",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      },
+      {
+        "id": "building_point_type",
+        "label": "Building Point Type",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "Corner",
+          "Projection"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "quality",
+        "label": "Quality",
+        "type": "DROPDOWN",
+        "isRequired": false,
+        "options": [
+          "GPS from Locate",
+          "Other",
+          "Unknown",
+          "Visible Asset"
+        ],
+        "hint": "Select",
+        "defaultValue": ""
+      },
+      {
+        "id": "comments",
+        "label": "Comments",
+        "type": "TEXTMULTILINE",
+        "isRequired": false,
+        "options": [],
+        "hint": "",
+        "defaultValue": ""
+      }
+    ]
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "token": "fake-jwt-token-for-development",
+  "userId": "user123",
+  "username": "bhavani",
+  "expires": 1767225600000
+}

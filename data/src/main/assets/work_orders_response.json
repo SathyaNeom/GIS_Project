@@ -1,0 +1,128 @@
+{
+  "6 Foot Pole": [
+    {
+      "id": "wo_6ft_001",
+      "workOrderNumber": "22910778",
+      "address": "33 BRIAN DR NORTH YORK",
+      "poleType": "6 Foot Pole",
+      "distance": 150,
+      "displayText": "||33 BRIAN DR NORTH YORK||22910778"
+    },
+    {
+      "id": "wo_6ft_002",
+      "workOrderNumber": "22910764",
+      "address": "37 BRIAN DR NORTH YORK",
+      "poleType": "6 Foot Pole",
+      "distance": 200,
+      "displayText": "||37 BRIAN DR NORTH YORK||22910764"
+    },
+    {
+      "id": "wo_6ft_003",
+      "workOrderNumber": "22910850",
+      "address": "45 BRIAN DR NORTH YORK",
+      "poleType": "6 Foot Pole",
+      "distance": 280,
+      "displayText": "||45 BRIAN DR NORTH YORK||22910850"
+    },
+    {
+      "id": "wo_6ft_004",
+      "workOrderNumber": "22910912",
+      "address": "52 BRIAN DR NORTH YORK",
+      "poleType": "6 Foot Pole",
+      "distance": 350,
+      "displayText": "||52 BRIAN DR NORTH YORK||22910912"
+    }
+  ],
+  "8 Foot Pole": [
+    {
+      "id": "wo_8ft_001",
+      "workOrderNumber": "34733610",
+      "address": "118 PINDAR CRES NORTH YORK",
+      "poleType": "8 Foot Pole",
+      "distance": 120,
+      "displayText": "||118 PINDAR CRES NORTH YORK||34733610"
+    },
+    {
+      "id": "wo_8ft_002",
+      "workOrderNumber": "34733606",
+      "address": "121 PINDAR CRES NORTH YORK",
+      "poleType": "8 Foot Pole",
+      "distance": 175,
+      "displayText": "||121 PINDAR CRES NORTH YORK||34733606"
+    },
+    {
+      "id": "wo_8ft_003",
+      "workOrderNumber": "34733598",
+      "address": "125 PINDAR CRES NORTH YORK",
+      "poleType": "8 Foot Pole",
+      "distance": 220,
+      "displayText": "||125 PINDAR CRES NORTH YORK||34733598"
+    },
+    {
+      "id": "wo_8ft_004",
+      "workOrderNumber": "34733582",
+      "address": "130 PINDAR CRES NORTH YORK",
+      "poleType": "8 Foot Pole",
+      "distance": 290,
+      "displayText": "||130 PINDAR CRES NORTH YORK||34733582"
+    },
+    {
+      "id": "wo_8ft_005",
+      "workOrderNumber": "34733574",
+      "address": "135 PINDAR CRES NORTH YORK",
+      "poleType": "8 Foot Pole",
+      "distance": 340,
+      "displayText": "||135 PINDAR CRES NORTH YORK||34733574"
+    }
+  ],
+  "Handheld": [
+    {
+      "id": "wo_hh_001",
+      "workOrderNumber": "19845632",
+      "address": "78 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 100,
+      "displayText": "||78 WELLINGTON ST TORONTO||19845632"
+    },
+    {
+      "id": "wo_hh_002",
+      "workOrderNumber": "19845644",
+      "address": "82 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 145,
+      "displayText": "||82 WELLINGTON ST TORONTO||19845644"
+    },
+    {
+      "id": "wo_hh_003",
+      "workOrderNumber": "19845658",
+      "address": "90 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 210,
+      "displayText": "||90 WELLINGTON ST TORONTO||19845658"
+    },
+    {
+      "id": "wo_hh_004",
+      "workOrderNumber": "19845670",
+      "address": "95 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 275,
+      "displayText": "||95 WELLINGTON ST TORONTO||19845670"
+    },
+    {
+      "id": "wo_hh_005",
+      "workOrderNumber": "19845688",
+      "address": "102 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 330,
+      "displayText": "||102 WELLINGTON ST TORONTO||19845688"
+    },
+    {
+      "id": "wo_hh_006",
+      "workOrderNumber": "19845696",
+      "address": "110 WELLINGTON ST TORONTO",
+      "poleType": "Handheld",
+      "distance": 385,
+      "displayText": "||110 WELLINGTON ST TORONTO||19845696"
+    }
+  ]
+}

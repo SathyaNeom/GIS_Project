@@ -1,0 +1,18 @@
+[
+  {
+    "id": "34733610",
+    "address": "118 PINDAR CRES NORTH YORK",
+    "municipality": "North York",
+    "status": "Assigned",
+    "serviceType": "BASIC",
+    "connectionType": "RECONNECT"
+  },
+  {
+    "id": "34733612",
+    "address": "250 MAIN ST TORONTO",
+    "municipality": "Toronto",
+    "status": "In Progress",
+    "serviceType": "PREMIUM",
+    "connectionType": "NEW"
+  }
+]

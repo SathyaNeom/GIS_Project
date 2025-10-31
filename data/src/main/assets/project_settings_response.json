@@ -1,0 +1,13 @@
+{
+  "contractor": "NPL Canada Ltd.",
+  "crewId": "CREW-05",
+  "supervisor": "Bhavani S.",
+  "fitterName": "John Doe",
+  "welderName": "Jane Smith",
+  "workOrderTypes": [
+    "6 Foot Pole",
+    "8 Foot Pole",
+    "Handheld"
+  ],
+  "defaultDownloadDistance": 500
+}

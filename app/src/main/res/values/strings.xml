@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Electronic Services</string>
+
+    <!-- App Variants - These will be overridden by BuildConfig -->
+    <string name="variant_electronic">electronic</string>
+    <string name="variant_maintenance">maintenance</string>
+    <string name="variant_construction">construction</string>
+    <string name="variant_resurvey">resurvey</string>
+    <string name="variant_gas_storage">gas-storage</string>
+
+    <!-- App Names -->
+    <string name="app_name_electronic">Electronic Services</string>
+    <string name="app_name_maintenance">Maintenance</string>
+    <string name="app_name_construction">Construction</string>
+    <string name="app_name_resurvey">Resurvey</string>
+    <string name="app_name_gas_storage">Gas Storage</string>
+</resources>
