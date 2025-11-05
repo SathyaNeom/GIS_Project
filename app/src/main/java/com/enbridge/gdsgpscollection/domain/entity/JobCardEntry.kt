@@ -1,0 +1,105 @@
+package com.enbridge.gdsgpscollection.domain.entity
+
+/**
+ * @author Sathya Narayanan
+ */
+import java.util.Date
+
+/**
+ * Domain entity representing a Job Card Entry with complete form data
+ * across JobCard, Measurements, and MeterInfo tabs
+ */
+data class JobCardEntry(
+    val id: String = "",
+
+    // JobCard Tab Fields
+    val workOrder: String = "",
+    val address: String = "",
+    val blockLot: String = "",
+    val municipality: String = "",
+    val parentAssetId: String = "",
+    val serviceType: String = "",
+    val serviceDesign: String = "",
+    val connectionType: String = "",
+    val connectionWith: String = "",
+    val insideMeter: String = "",
+    val wallIO: String = "",
+    val wallRLFB: String = "",
+    val jointTrench: String = "",
+    val railwayCrossing: String = "",
+    val wallToWall: String = "",
+    val basement: String = "",
+    val buildingEntry: String = "",
+    val entry: String = "",
+    val depth: String = "",
+    val restoration: String = "",
+    val meterGuardRequired: String = "",
+    val servicePipeNPS: String = "",
+    val servicePipeMaterial: String = "",
+    val servicePipeStatus: String = "",
+    val servicePipePressure: String = "",
+    val methodOfInstallation: String = "",
+    val excessFlowValveInst: String = "",
+    val bricked: String = "",
+    val windows: String = "",
+    val vents: String = "",
+    val mainEnergizedBy: String = "",
+    val mainEnergizedDate: Long? = null,
+    val numFACApplications: String = "",
+    val serviceValveFittings: String = "",
+    val applicationCertificateNum: String = "",
+    val serviceValveDescription: String = "",
+    val serviceValveRefDir: String = "",
+    val pressureTestType: String = "",
+    val pressureTestTypeOther: String = "",
+    val testPressure: String = "700",
+    val testDuration: String = "",
+    val testUnit: String = "",
+    val testMedium: String = "",
+    val testDate: Long? = null,
+    val fieldAppCoatingType: String = "",
+    val serviceValveReferencePt: String = "",
+    val serviceValveLocDir: String = "",
+    val mqapVersion: String = "",
+    val userId: String = "",
+
+    // Measurements Tab Fields
+    val connectorPipeLocDist: String = "",
+    val connectorPipeLocDir: String = "",
+    val connectorPipeRefDir: String = "",
+    val connectorPipeRefPoint: String = "",
+    val connectorPipePosition: String = "",
+    val streetWidth: String = "",
+    val tapSize: String = "",
+    val riserOnWall: String = "",
+    val riserDistance: String = "",
+    val riserFromWall: String = "",
+    val riserDepth: String = "",
+    val riserLength: String = "",
+    val riserInFoundation: String = "",
+    val mainToBuildingLine: String = "",
+    val mainToStreetLine: String = "",
+    val slToBL: String = "",
+    val curbToGasMainDistance: String = "",
+    val connectionDataLocation: String = "",
+    val tieInBuildingRef: String = "",
+    val tieInLocationDesc: String = "",
+    val connectionDepth: String = "",
+    val buildingCornerRef: String = "",
+    val serviceLengthTotal: String = "",
+    val stubLength: String = "",
+    val mainToStickOutlet: String = "",
+
+    // MeterInfo Tab Fields
+    val meterOnIndex: String = "00000",
+    val meterSize: String = "",
+    val meterNumber: String = "",
+    val meterMakeNo: String = "",
+    val meterNoDials: String = "5",
+    val meterLocation: String = "",
+    val meterGIYear: String = "",
+    val regulatorLocation: String = "",
+    val regulatorTypeCode: String = "",
+    val regulatorManufacturerDt: String = "",
+    val regulatorFunction: String = ""
+)

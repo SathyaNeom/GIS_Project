@@ -1,13 +1,13 @@
 # Quick Start Guide
 
-This guide provides step-by-step instructions to set up and run the GPS_Device_Proj Android
+This guide provides step-by-step instructions to set up and run the GdsGpsCollection Android
 application.
 
 ## Prerequisites
 
 Ensure the following tools are installed before proceeding:
 
-- Android Studio Ladybug (2024.2.1) or later
+- Android Studio Narwhal 4 Feature Drop | 2025.1 or later
 - JDK 17 or higher
 - Android SDK with API Level 34 or higher
 - Git for version control
@@ -19,7 +19,7 @@ Ensure the following tools are installed before proceeding:
 
 ```bash
 git clone <repository-url>
-cd GPS_Device_Proj
+cd GdsGpsCollection
 ```
 
 ### Step 2: Obtain ArcGIS API Key

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        Debug-only manifest additions.
+        This manifest is merged with the main manifest only in debug builds.
+    -->
+
+    <application>
+        <!-- Test activity for instrumented tests with Hilt -->
+        <activity
+            android:name=".HiltTestActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GdsGpsCollection" />
+    </application>
+
+</manifest>

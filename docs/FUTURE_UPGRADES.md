@@ -1,7 +1,7 @@
 # Future Upgrades and Roadmap
 
 This document outlines planned enhancements, technical debt items, and future development priorities
-for the GPS_Device_Proj Android application.
+for the GdsGpsCollection Android application.
 
 ## Overview
 
@@ -565,7 +565,7 @@ As features are implemented, update the following documentation:
 
 ## Conclusion
 
-This roadmap provides a structured approach to evolving the GPS_Device_Proj application from its
+This roadmap provides a structured approach to evolving the GdsGpsCollection application from its
 current foundation to a production-ready, enterprise-grade solution. Priorities should be adjusted
 based on business requirements, user feedback, and resource availability.
 

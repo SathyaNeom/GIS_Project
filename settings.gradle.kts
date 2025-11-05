@@ -26,6 +26,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GPS_Device_Proj"
+rootProject.name = "GdsGpsCollection"
 include(":app")
 include(":app-catalog")

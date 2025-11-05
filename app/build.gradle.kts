@@ -16,17 +16,26 @@ plugins {
 }
 
 android {
-    namespace = "com.enbridge.gpsdeviceproj"
+    namespace = "com.enbridge.gdsgpscollection"
     compileSdk = 36
 
+    testOptions {
+        animationsDisabled = true
+        unitTests.isReturnDefaultValues = true
+
+        // Test orchestrator disabled - add dependency if needed
+        // execution = "ANDROIDX_TEST_ORCHESTRATOR"
+    }
+
     defaultConfig {
-        applicationId = "com.enbridge.gpsdeviceproj"
+        applicationId = "com.enbridge.gdsgpscollection"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.enbridge.gdsgpscollection.HiltTestRunner"
+        testInstrumentationRunnerArguments["functionalTest"] = "false"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -40,6 +49,7 @@ android {
         }
         val arcgisApiKey = properties.getProperty("ARCGIS_API_KEY", "")
         buildConfigField("String", "ARCGIS_API_KEY", "\"$arcgisApiKey\"")
+
     }
 
     signingConfigs {
@@ -127,6 +137,27 @@ android {
             )
 
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // Configure APK output names
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val variantName = when (flavorName) {
+                "construction" -> "Main_Construction"
+                "electronic" -> "Electronic Services"
+                "gasStorage" -> "Gas Storage"
+                "maintenance" -> "Maintenance"
+                "resurvey" -> "Resurvey"
+                else -> flavorName.replaceFirstChar { it.uppercase() }
+            }
+
+            // Only rename release builds - use base version name without suffixes
+            if (buildType.name == "release") {
+                val baseVersionName = defaultConfig.versionName
+                output.outputFileName = "${variantName}_v${baseVersionName}.apk"
+            }
         }
     }
 
@@ -235,6 +266,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.hilt.android.testing)
+    kaptAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

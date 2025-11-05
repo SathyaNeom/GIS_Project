@@ -3,7 +3,7 @@
 ## Overview
 
 This document explains how build variants affect app resources, particularly launcher icons and
-in-app branding components like `AppLogo`. The GPS_Device_Proj application uses Android's product
+in-app branding components like `AppLogo`. The GdsGpsCollection application uses Android's product
 flavors to provide different branding for each service type.
 
 ---
@@ -14,7 +14,7 @@ The application has **5 product flavors** defined in `app/build.gradle.kts`:
 
 | Variant | Application ID Suffix | App Name | Description |
 |---------|----------------------|----------|-------------|
-| `electronic` | `.electronic` | GPS Device Project | For electronic service operations |
+| `electronic` | `.electronic` | GDS GPS Collection | For electronic service operations |
 | `maintenance` | `.maintenance` | Maintenance | For maintenance operations |
 | `construction` | `.construction` | Construction | For construction operations |
 | `resurvey` | `.resurvey` | Resurvey | For resurvey operations |
@@ -178,7 +178,7 @@ val appName = BuildConfig.APP_NAME         // e.g., "Electronic Services"
 Each variant also defines resource values:
 
 ```kotlin
-resValue("string", "app_name", "GPS Device Project")
+resValue("string", "app_name", "GDS GPS Collection")
 ```
 
 This creates a string resource that can be accessed via:
@@ -376,7 +376,7 @@ This is accessible from Kotlin as `BuildConfig.APP_NAME`.
 ## Related Files
 
 - `app/build.gradle.kts` - Variant definitions
-- `app/src/main/java/com/enbridge/gpsdeviceproj/designsystem/components/AppLogo.kt` - AppLogo
+- `app/src/main/java/com/enbridge/gdsgpscollection/designsystem/components/AppLogo.kt` - AppLogo
   component
 - `app/src/{variant}/res/drawable/ic_launcher_foreground.xml` - Variant-specific icons
 - `app/src/main/AndroidManifest.xml` - References to launcher icons

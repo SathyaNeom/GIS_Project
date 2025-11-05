@@ -3,7 +3,7 @@
 ## Overview
 
 This document summarizes the comprehensive documentation reorganization completed to streamline the
-GPS Device Project Android application documentation and eliminate redundancy.
+GDS GPS Collection Android application documentation and eliminate redundancy.
 
 **Date:** January 30, 2025  
 **Objective:** Consolidate testing documentation, create proper folder structure, and update all

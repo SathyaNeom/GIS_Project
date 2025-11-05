@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">GPS Device Project</string>
+    <!-- App Logo -->
+    <string name="app_logo_description">GPS Device Project Logo</string>
+    <string name="app_logo_text">Electronic Services</string>
+
+    <!-- Navigation Drawer -->
+    <string name="task_list">Task List</string>
+    <string name="collect_electronic_services">Collect Electronic Services</string>
+    <string name="es_job_card_entry">ES Job Card Entry</string>
+    <string name="project_settings">Project Settings</string>
+    <string name="manage_es_edits">Manage ES Edits</string>
 </resources>

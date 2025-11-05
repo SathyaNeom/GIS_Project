@@ -1,4 +1,4 @@
-# GPS_Device_Proj - Android Application
+# GdsGpsCollection - Android Application
 
 [![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](docs/TESTING.md)
 [![Tests](https://img.shields.io/badge/tests-200%2B-success)](docs/TESTING.md)
@@ -6,11 +6,11 @@
 [![Kotlin](https://img.shields.io/badge/kotlin-2.0.0-purple)](https://kotlinlang.org)
 
 An enterprise-grade Android application built with Jetpack Compose and Clean Architecture principles
-for managing GPS Device Project operations and GIS functionality.
+for managing GDS GPS Collection operations and GIS functionality.
 
 ## Overview
 
-GPS_Device_Proj is a streamlined Android application designed for field operations management, work
+GdsGpsCollection is a streamlined Android application designed for field operations management, work
 order tracking, and geographic information system integration. The application implements modern
 Android development practices with a comprehensive design system, ensuring consistency,
 accessibility, and maintainability.
@@ -107,7 +107,7 @@ The project uses a **single-module architecture** with package-based organizatio
 maintainability:
 
 ```
-GPS_Device_Proj/
+GdsGpsCollection/
 ├── README.md                         # This file
 ├── QUICK_START.md                    # Setup guide
 │
@@ -121,7 +121,7 @@ GPS_Device_Proj/
 ├── app/                              # Main application module
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/com/enbridge/gpsdeviceproj/
+│   │   │   ├── java/com/enbridge/gdsgpscollection/
 │   │   │   │   ├── data/            # Data layer (API, repositories, Room, mappers)
 │   │   │   │   ├── domain/          # Domain layer (entities, use cases, interfaces)
 │   │   │   │   ├── ui/              # UI layer (screens, ViewModels)
@@ -132,7 +132,7 @@ GPS_Device_Proj/
 │   │   │   │   ├── di/              # Dependency injection modules
 │   │   │   │   ├── navigation/      # Navigation graph
 │   │   │   │   ├── network/         # Network client configuration
-│   │   │   │   ├── ElectronicServicesApp.kt
+│   │   │   │   ├── GdsGpsCollectionApp.kt
 │   │   │   │   └── MainActivity.kt
 │   │   │   ├── res/                 # Resources (layouts, strings, drawables)
 │   │   │   └── assets/              # JSON mock data files
@@ -147,7 +147,7 @@ GPS_Device_Proj/
 │
 ├── app-catalog/                      # Design system showcase app
 │   ├── src/main/
-│   │   └── java/com/enbridge/gpsdeviceproj/
+│   │   └── java/com/enbridge/gdsgpscollection/
 │   │       └── designsystem/        # Copy of design system for catalog
 │   └── build.gradle.kts
 │
@@ -165,11 +165,11 @@ GPS_Device_Proj/
 
 ### Source Code Organization
 
-All application code is located in `app/src/main/java/com/enbridge/gpsdeviceproj/` with the following package structure:
+All application code is located in `app/src/main/java/com/enbridge/gdsgpscollection/` with the following package structure:
 
 ```
 
-com.enbridge.gpsdeviceproj/
+com.enbridge.gdsgpscollection/
 ├── data/ # Data Layer
 │ ├── api/ # REST API interfaces and services
 │ ├── local/ # Room database, DAOs, and entities
@@ -396,7 +396,7 @@ Before Production Release:
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd GPS_Device_Proj
+   cd GdsGpsCollection
    ```
 
 2. **Configure ArcGIS API key** in `local.properties`:
@@ -555,14 +555,14 @@ When contributing to this project:
 - **Coverage Thresholds**: Automatic verification
 - **Documentation**: Complete testing guide
 
-### Release Readiness (December 2024)
+### Release Readiness (November 2025)
 
 - **Security**: Enhanced ProGuard rules, API key documentation
 - **Build System**: Signing configuration, minification
 - **Code Quality**: String externalization (250+ strings)
 - **Documentation**: Comprehensive release checklist
 
-### Build Variants Implementation (November 2024)
+### Build Variants Implementation (November 2025)
 
 - **5 Product Flavors**: electronic, maintenance, construction, resurvey, gasStorage
 - **Variant-Specific Branding**: Unique names, icons, and features

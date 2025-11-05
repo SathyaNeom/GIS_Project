@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.enbridge.gpsdeviceproj.catalog"
+    namespace = "com.enbridge.gdsgpscollection.catalog"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.enbridge.gpsdeviceproj.catalog"
+        applicationId = "com.enbridge.gdsgpscollection.catalog"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

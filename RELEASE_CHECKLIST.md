@@ -1,4 +1,4 @@
-# Release Checklist for GPS Device Project Android App
+# Release Checklist for GDS GPS Collection Android App
 
 This comprehensive checklist ensures your app is ready for production release. Follow each step
 carefully before building and publishing your release APK/AAB.
@@ -54,7 +54,7 @@ carefully before building and publishing your release APK/AAB.
 
 - [ ] **ArcGIS API Key** is NOT hardcoded
     - ✅ Loaded from `local.properties` (development)
-    - ✅ Documented security best practices in `ElectronicServicesApp.kt`
+    - ✅ Documented security best practices in `GdsGpsCollectionApp.kt`
     - [ ] TODO: Implement CI/CD environment variable approach (see TODO in code)
     - [ ] Consider backend proxy for production (most secure)
 
@@ -479,6 +479,6 @@ If issues are discovered after release:
 
 ---
 
-**Last Updated:** December 2024
+**Last Updated:** November 2025
 **Version:** 1.0
 **App Version:** 1.0 (versionCode 1)

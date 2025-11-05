@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides quick commands for running tests and viewing reports in the GPS Device Project
+This guide provides quick commands for running tests and viewing reports in the GDS GPS Collection
 project.
 
 ## Test Types

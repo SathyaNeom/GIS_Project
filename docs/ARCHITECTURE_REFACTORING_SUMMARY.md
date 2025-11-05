@@ -6,7 +6,7 @@
 
 ## Overview
 
-The GPS_Device_Proj Android application underwent a comprehensive architectural refactoring to
+The GdsGpsCollection Android application underwent a comprehensive architectural refactoring to
 consolidate from a multi-module structure to a single-module, package-based organization. This
 refactoring was undertaken to simplify the codebase structure, improve developer productivity, and
 optimize build performance for the current project scale.
@@ -319,7 +319,7 @@ The architecture refactoring successfully achieved all objectives:
 ✅ **Maintained Quality**: All tests and coverage preserved  
 ✅ **Preserved Functionality**: All features working correctly
 
-The GPS_Device_Proj application now has a simpler, more maintainable architecture appropriate
+The GdsGpsCollection application now has a simpler, more maintainable architecture appropriate
 for its current scale, while retaining the flexibility to re-modularize in the future if needed.
 
 ## References

@@ -4,8 +4,8 @@
 
 # Keep Compose related classes
 -keep class androidx.compose.** { *; }
--keep class com.enbridge.electronicservices.catalog.** { *; }
--keep class com.enbridge.electronicservices.designsystem.** { *; }
+-keep class com.enbridge.gdsgpscollection.catalog.** { *; }
+-keep class com.enbridge.gdsgpscollection.designsystem.** { *; }
 
 # Keep all Composable functions
 -keep @androidx.compose.runtime.Composable public class * {

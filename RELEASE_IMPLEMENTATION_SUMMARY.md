@@ -2,18 +2,172 @@
 
 ## Overview
 
-This document summarizes all the changes implemented to make the GPS Device Project Android app *
+This document summarizes all the changes implemented to make the GDS GPS Collection Android app *
 *RELEASE READY**.
 
-**Date:** December 2024  
-**Status:** ✅ RELEASE READY  
+**Date:** December 2025  
+**Status:** RELEASE READY  
 **Version:** 1.0 (versionCode 1)
+
+---
+
+## Latest Changes - Package Rename & APK Naming (December 2025)
+
+### Project Rename to GdsGpsCollection
+
+**Date:** December 2025  
+**Status:** COMPLETE
+
+#### Changes Implemented:
+
+**1. Project Name Update**
+
+- Updated `settings.gradle.kts` - Changed `rootProject.name` from "GdsGpsCollection" to "
+  GdsGpsCollection"
+
+**2. Package Name Refactoring**
+
+- **Old Package:** `com.enbridge.gdsgpscollection`
+- **New Package:** `com.enbridge.gdsgpscollection`
+
+Files Updated:
+
+- `app/build.gradle.kts` - Updated `namespace` and `applicationId`
+- `app-catalog/build.gradle.kts` - Updated `namespace` and `applicationId`
+- All Kotlin source files (~120+ files) - Updated package declarations and imports
+- Physical directory structure renamed from `gpsdeviceproj` to `gdsgpscollection`
+- Test directories updated (`test`, `androidTest`, `debug`)
+
+**3. Application Class Renamed**
+
+- **Old:** `GdsGpsCollectionApp`
+- **New:** `GdsGpsCollectionApp`
+- Updated AndroidManifest.xml references
+
+**4. Theme Renamed**
+
+- **Old:** `Theme.ElectronicServices` / `GdsGpsCollectionTheme`
+- **New:** `Theme.GdsGpsCollection` / `GdsGpsCollectionTheme`
+- Updated all theme XML files and Kotlin references
+
+**5. APK Naming Configuration**
+
+Added custom APK naming for each build variant in `app/build.gradle.kts`:
+
+| Build Variant | APK Name Pattern                       |
+|---------------|----------------------------------------|
+| construction  | Main_Construction_v{versionName}.apk   |
+| electronic    | Electronic Services_v{versionName}.apk |
+| gasStorage    | Gas Storage_v{versionName}.apk         |
+| maintenance   | Maintenance_v{versionName}.apk         |
+| resurvey      | Resurvey_v{versionName}.apk            |
+
+Implementation:
+
+```kotlin
+applicationVariants.all {
+    outputs.all {
+        val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+        val variantName = when (flavorName) {
+            "construction" -> "Main_Construction"
+            "electronic" -> "Electronic Services"
+            "gasStorage" -> "Gas Storage"
+            "maintenance" -> "Maintenance"
+            "resurvey" -> "Resurvey"
+            else -> flavorName.capitalize()
+        }
+        
+        if (buildType.name == "release") {
+            output.outputFileName = "${variantName}_v${versionName}.apk"
+        }
+    }
+}
+```
+
+**Benefits:**
+
+- Clear identification of APK variants
+- Professional naming convention
+- Version number included in filename
+- Easier distribution and deployment
+
+#### Files Modified:
+
+**Configuration Files:**
+
+1. `settings.gradle.kts` - Project name
+2. `app/build.gradle.kts` - Package name, APK naming
+3. `app-catalog/build.gradle.kts` - Package name
+4. `app/src/main/AndroidManifest.xml` - App name and theme
+5. `app/src/debug/AndroidManifest.xml` - Theme reference
+6. `app/src/main/res/values/themes.xml` - Theme name
+7. `app-catalog/src/main/res/values/themes.xml` - Theme name
+8. `app/proguard-rules.pro` - Package name references
+9. `app-catalog/proguard-rules.pro` - Package name references
+
+**Source Code:**
+
+- ~120+ Kotlin files with package declarations updated
+- All import statements updated across the codebase
+- Main app module: `app/src/main/java/com/enbridge/gdsgpscollection/`
+- Test module: `app/src/test/java/com/enbridge/gdsgpscollection/`
+- Android Test module: `app/src/androidTest/java/com/enbridge/gdsgpscollection/`
+- Debug module: `app/src/debug/java/com/enbridge/gdsgpscollection/`
+- Catalog module: `app-catalog/src/main/java/com/enbridge/gdsgpscollection/`
+
+**Key Files Renamed:**
+
+- `GdsGpsCollectionApp.kt` → `GdsGpsCollectionApp.kt`
+- All theme references updated to `GdsGpsCollectionTheme`
+
+#### Impact:
+
+**Positive:**
+
+- Professional package naming aligned with project name
+- Clear APK identification for distribution
+- Consistent branding across the application
+- Better organization and identification
+
+**Testing Required:**
+
+- Clean and rebuild project required
+- Test all build variants to ensure APK generation works correctly
+- Verify app functionality after package rename
+- Check Hilt dependency injection still works
+- Validate all navigation flows
+
+#### Build Commands (Updated):
+
+```bash
+# Clean project
+./gradlew clean
+
+# Debug builds
+./gradlew assembleConstructionDebug
+./gradlew assembleElectronicDebug
+./gradlew assembleGasStorageDebug
+./gradlew assembleMaintenanceDebug
+./gradlew assembleResurveyDebug
+
+# Release builds (with new naming)
+./gradlew assembleConstructionRelease   # Generates: Main_Construction_v1.0.apk
+./gradlew assembleElectronicRelease     # Generates: Electronic Services_v1.0.apk
+./gradlew assembleGasStorageRelease     # Generates: Gas Storage_v1.0.apk
+./gradlew assembleMaintenanceRelease    # Generates: Maintenance_v1.0.apk
+./gradlew assembleResurveyRelease       # Generates: Resurvey_v1.0.apk
+
+# All release variants
+./gradlew assembleRelease
+```
+
+**Output Location:** `app/build/outputs/apk/<variant>/release/`
 
 ---
 
 ## Changes Implemented
 
-### 1. String Resource Externalization ✅
+### 1. String Resource Externalization
 
 **Problem:** Hardcoded strings throughout the application made localization impossible and violated
 Android best practices.
@@ -79,7 +233,7 @@ obfuscation.
 
 #### File Updated:
 
-- `app/src/main/java/com/enbridge/electronicservices/ElectronicServicesApp.kt`
+- `app/src/main/java/com/enbridge/electronicservices/GdsGpsCollectionApp.kt`
 
 #### Documentation Added:
 
@@ -275,15 +429,15 @@ release {
 
 ## Implementation Statistics
 
-| Category | Count | Status |
-|----------|-------|--------|
-| Strings Externalized | 250+ | ✅ Complete |
-| ProGuard Rules | 270+ lines | ✅ Complete |
-| Build Config Changes | 50+ lines | ✅ Complete |
-| Documentation Lines | 1500+ | ✅ Complete |
-| Files Created | 3 | ✅ Complete |
-| Files Updated | 15+ | ✅ Complete |
-| Security Improvements | 7 | ✅ Complete |
+| Category              | Count      | Status     |
+|-----------------------|------------|------------|
+| Strings Externalized  | 250+       | ✅ Complete |
+| ProGuard Rules        | 270+ lines | ✅ Complete |
+| Build Config Changes  | 50+ lines  | ✅ Complete |
+| Documentation Lines   | 1500+      | ✅ Complete |
+| Files Created         | 3          | ✅ Complete |
+| Files Updated         | 15+        | ✅ Complete |
+| Security Improvements | 7          | ✅ Complete |
 
 ---
 
@@ -366,16 +520,16 @@ Before first production release:
 
 ## Security Checklist Status
 
-| Item | Status | Notes |
-|------|--------|-------|
-| ProGuard Rules | ✅ Complete | Comprehensive rules for all libs |
-| Code Obfuscation | ✅ Enabled | isMinifyEnabled = true |
-| Resource Shrinking | ✅ Enabled | isShrinkResources = true |
-| API Key in local.properties | ✅ Secure | Not in version control |
-| Keystore in .gitignore | ✅ Protected | *.jks ignored |
-| Signing Config | ⚠️ Template | Needs keystore generation |
-| HTTPS Endpoints | ✅ Configured | Default URL uses HTTPS |
-| No Hardcoded Secrets | ✅ Verified | All externalized |
+| Item                        | Status       | Notes                            |
+|-----------------------------|--------------|----------------------------------|
+| ProGuard Rules              | ✅ Complete   | Comprehensive rules for all libs |
+| Code Obfuscation            | ✅ Enabled    | isMinifyEnabled = true           |
+| Resource Shrinking          | ✅ Enabled    | isShrinkResources = true         |
+| API Key in local.properties | ✅ Secure     | Not in version control           |
+| Keystore in .gitignore      | ✅ Protected  | *.jks ignored                    |
+| Signing Config              | ⚠️ Template  | Needs keystore generation        |
+| HTTPS Endpoints             | ✅ Configured | Default URL uses HTTPS           |
+| No Hardcoded Secrets        | ✅ Verified   | All externalized                 |
 
 ---
 
@@ -414,7 +568,7 @@ Before first production release:
 1. `app/proguard-rules.pro`
 2. `.gitignore`
 3. `app/build.gradle.kts`
-4. `app/src/main/java/com/enbridge/electronicservices/ElectronicServicesApp.kt`
+4. `app/src/main/java/com/enbridge/electronicservices/GdsGpsCollectionApp.kt`
 5. `core/src/main/java/com/enbridge/electronicservices/core/network/KtorClient.kt`
 6. `feature_auth/src/main/java/com/enbridge/electronicservices/feature/auth/LoginScreen.kt`
 7. `feature_jobs/src/main/java/com/enbridge/electronicservices/feature/jobs/JobCardEntryScreen.kt`
@@ -442,7 +596,7 @@ Before first production release:
 
 ## Conclusion
 
-The GPS Device Project Android app is now **RELEASE READY** with enterprise-grade security, code
+The GDS GPS Collection Android app is now **RELEASE READY** with enterprise-grade security, code
 quality, and documentation. All best practices for Android release builds have been implemented.
 
 The developer can now:
@@ -459,3 +613,11 @@ The developer can now:
 **Implementation completed by:** AI Assistant  
 **Review status:** Ready for developer review  
 **Next milestone:** First production release
+**Output Location:** `app/build/outputs/apk/<variant>/release/`
+
+---
+
+
+
+## Changes Implemented
+

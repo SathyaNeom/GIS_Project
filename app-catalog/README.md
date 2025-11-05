@@ -1,6 +1,6 @@
 # Design System Catalog App 🎨
 
-A standalone Android application that showcases all components from the GPS Device Project design
+A standalone Android application that showcases all components from the GDS GPS Collection design
 system. This catalog serves as both a visual reference and an interactive testing tool for
 developers.
 
@@ -74,7 +74,7 @@ adb install app-catalog/build/outputs/apk/debug/app-catalog-debug.apk
 app-catalog/
 ├── src/
 │   └── main/
-│       ├── java/com/enbridge/electronicservices/catalog/
+│       ├── java/com/enbridge/gdsgpscollection/catalog/
 │       │   ├── CatalogActivity.kt          # Main activity
 │       │   └── ComponentCatalogScreen.kt   # Catalog screen with all sections
 │       └── AndroidManifest.xml
@@ -175,7 +175,7 @@ When adding new components to the design system:
 
 ## Notes
 
-- The catalog uses the same theme (`ElectronicServicesTheme`) as the main app
+- The catalog uses the same theme (`GdsGpsCollectionTheme`) as the main app
 - All components use the design system's spacing, colors, and typography
 - The catalog is edge-to-edge for modern Android UI
 - Snackbars appear at the bottom of the screen
@@ -192,5 +192,5 @@ For issues or questions about the catalog:
 ---
 
 **Version**: 1.0.0  
-**Last Updated**: October 2024  
+**Last Updated**: October 2025  
 **Maintained By**: Design System Team

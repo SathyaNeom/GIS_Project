@@ -56,11 +56,11 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.enbridge.electronicservices.**$$serializer { *; }
--keepclassmembers class com.enbridge.electronicservices.** {
+-keep,includedescriptorclasses class com.enbridge.gdsgpscollection.**$$serializer { *; }
+-keepclassmembers class com.enbridge.gdsgpscollection.** {
     *** Companion;
 }
--keepclasseswithmembers class com.enbridge.electronicservices.** {
+-keepclasseswithmembers class com.enbridge.gdsgpscollection.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
@@ -164,19 +164,19 @@
 # ================================================================================================
 # DOMAIN MODELS (Keep data classes for serialization)
 # ================================================================================================
--keep class com.enbridge.electronicservices.domain.entity.** { *; }
--keep class com.enbridge.electronicservices.data.api.dto.** { *; }
--keep class com.enbridge.electronicservices.data.local.entity.** { *; }
+-keep class com.enbridge.gdsgpscollection.domain.entity.** { *; }
+-keep class com.enbridge.gdsgpscollection.data.api.dto.** { *; }
+-keep class com.enbridge.gdsgpscollection.data.local.entity.** { *; }
 
--keepclassmembers class com.enbridge.electronicservices.domain.entity.** {
+-keepclassmembers class com.enbridge.gdsgpscollection.domain.entity.** {
     <init>(...);
     <fields>;
 }
--keepclassmembers class com.enbridge.electronicservices.data.api.dto.** {
+-keepclassmembers class com.enbridge.gdsgpscollection.data.api.dto.** {
     <init>(...);
     <fields>;
 }
--keepclassmembers class com.enbridge.electronicservices.data.local.entity.** {
+-keepclassmembers class com.enbridge.gdsgpscollection.data.local.entity.** {
     <init>(...);
     <fields>;
 }
