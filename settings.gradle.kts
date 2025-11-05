@@ -26,13 +26,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Electronic Services"
+rootProject.name = "GPS_Device_Proj"
 include(":app")
 include(":app-catalog")
-include(":core")
-include(":design-system")
-include(":domain")
-include(":data")
-include(":feature_auth")
-include(":feature_map")
-include(":feature_jobs")

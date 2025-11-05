@@ -1,16 +1,16 @@
-# Electronic Services - Android Application
+# GPS_Device_Proj - Android Application
 
 [![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](docs/TESTING.md)
 [![Tests](https://img.shields.io/badge/tests-200%2B-success)](docs/TESTING.md)
 [![Android](https://img.shields.io/badge/android-14%2B-blue)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/kotlin-2.1.0-purple)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/kotlin-2.0.0-purple)](https://kotlinlang.org)
 
 An enterprise-grade Android application built with Jetpack Compose and Clean Architecture principles
-for managing electronic services operations and GIS functionality.
+for managing GPS Device Project operations and GIS functionality.
 
 ## Overview
 
-Electronic Services is a modular Android application designed for field operations management, work
+GPS_Device_Proj is a streamlined Android application designed for field operations management, work
 order tracking, and geographic information system integration. The application implements modern
 Android development practices with a comprehensive design system, ensuring consistency,
 accessibility, and maintainability.
@@ -18,7 +18,8 @@ accessibility, and maintainability.
 ### Key Highlights
 
 - **Clean Architecture** with MVVM pattern
-- **Multi-Module** structure for scalability
+- **Single-Module Structure** for simplified navigation and faster builds
+- **Package-Based Organization** with clear layer separation
 - **Jetpack Compose** with Material 3
 - **5 Build Variants** for different business units
 - **ArcGIS Integration** for GIS functionality
@@ -75,7 +76,7 @@ accessibility, and maintainability.
 ## Architecture
 
 The application follows **Clean Architecture** with **MVVM pattern**, organized into distinct layers
-with clear separation of concerns.
+with clear separation of concerns within a single module structure.
 
 ### Architectural Layers
 
@@ -83,258 +84,30 @@ with clear separation of concerns.
 ┌─────────────────────────────────────┐
 │        Presentation Layer           │
 │   (ViewModels, UI State, Screens)  │
+│        Located in: ui/              │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
 │          Domain Layer               │
 │   (Use Cases, Entities, Repository  │
 │         Interfaces)                 │
+│        Located in: domain/          │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
 │           Data Layer                │
 │  (Repositories, API, Database, DTOs)│
+│        Located in: data/            │
 └─────────────────────────────────────┘
 ```
 
-### Module Structure
+### Package Structure
 
-The project is organized into multiple modules for better separation of concerns and build
-performance:
-
-#### Core Modules
-
-- **`app`** - Main application module with dependency injection and navigation
-- **`core`** - Shared utilities, network configuration, and common code
-- **`design-system`** - Comprehensive UI component library with Material 3 theming
-
-#### Business Logic
-
-- **`domain`** - Business logic layer with entities, use cases, and repository interfaces
-- **`data`** - Data layer with repository implementations, Room database, and API clients
-
-#### Features
-
-- **`feature_auth`** - Authentication and login features
-- **`feature_map`** - Map screen with ArcGIS Maps SDK integration
-- **`feature_jobs`** - Job and work order management
-
-#### Utilities
-
-- **`app-catalog`** - Standalone design system showcase application
-
-### Design Patterns
-
-- **MVVM** - Model-View-ViewModel for presentation layer
-- **Repository Pattern** - Abstract data sources from business logic
-- **Use Case Pattern** - Single-responsibility business operations
-- **Dependency Injection** - Hilt for dependency management
-- **Unidirectional Data Flow** - StateFlow for reactive state updates
-- **Clean Architecture** - Clear separation between layers
-
-### Key Architectural Decisions
-
-1. **Multi-Module Structure**: Enables parallel builds, clear boundaries, and code reusability
-2. **Clean Architecture**: Ensures testability, maintainability, and independence from frameworks
-3. **Jetpack Compose**: Modern, declarative UI with better performance
-4. **Kotlin Coroutines & Flow**: Structured concurrency and reactive streams
-5. **Hilt Dependency Injection**: Compile-time safety and automatic injection
-
-## Technology Stack
-
-### Core Technologies
-
-- **Language**: Kotlin 2.1.0
-- **UI Framework**: Jetpack Compose with Material 3
-- **Architecture**: Clean Architecture with MVVM
-- **Min SDK**: API 34 (Android 14)
-- **Target SDK**: API 36
-
-### Key Libraries
-
-#### UI & Navigation
-
-- **Jetpack Compose BOM**: 2024.09.00
-- **Material 3**: Latest components and theming
-- **Navigation Compose**: 2.8.5
-
-#### Dependency Injection
-
-- **Hilt**: 2.52
-
-#### Networking
-
-- **Ktor Client**: 3.0.3
-- **Kotlin Serialization**: 1.7.3
-
-#### Database
-
-- **Room**: 2.6.1 with KSP
-
-#### Maps
-
-- **ArcGIS Maps SDK**: 200.6.0
-
-#### Asynchronous
-
-- **Kotlin Coroutines**: 1.9.0
-- **Kotlin Flow**: Reactive streams
-
-#### Testing
-
-- **JUnit 5 Jupiter**: 5.11.4
-- **MockK**: 1.13.14
-- **Turbine**: 1.2.0 (Flow testing)
-- **Compose UI Test**: Latest
-- **Jacoco**: 0.8.11 (Coverage reporting)
-
-#### Build System
-
-- **Gradle**: 8.12.3
-- **Android Gradle Plugin**: 8.7.3
-- **Kotlin DSL**: For type-safe build scripts
-
-## Testing
-
-### Test Coverage Status
-
-The project has **enterprise-grade test coverage** with **200+ comprehensive tests**:
-
-| Layer            | Tests    | Coverage | Status           |
-|------------------|----------|----------|------------------|
-| **Domain**       | 50+      | 95%+     | Excellent        |
-| **Data**         | 69       | 90%+     | Excellent        |
-| **Presentation** | 55+      | 90%+     | Excellent        |
-| **UI**           | 25+      | 60%+     | Good             |
-| **Overall**      | **200+** | **~90%** | Production Ready |
-
-### Testing Infrastructure
-
-- **Unit Tests**: JUnit 5, MockK, Turbine
-- **Integration Tests**: Room database, repository tests
-- **UI Tests**: Compose UI testing framework
-- **Coverage Reports**: Jacoco with HTML & XML output
-- **Threshold Enforcement**: 80% minimum coverage
-- **CI/CD Ready**: XML reports for automation
-
-### Running Tests
-
-```bash
-# Run all tests
-.\gradlew.bat test
-
-# Run with coverage report
-.\gradlew.bat test jacocoTestReport
-
-# View coverage report
-start build\reports\jacoco\html\index.html
-
-# Verify coverage thresholds
-.\gradlew.bat jacocoCoverageVerification
-```
-
-### Testing Documentation
-
-For comprehensive testing information, see:
-
-- **[docs/TESTING.md](docs/TESTING.md)** - Complete testing guide
-- **[docs/TEST_IMPLEMENTATION_SUMMARY.md](docs/TEST_IMPLEMENTATION_SUMMARY.md)** - Implementation
-  details
-
-## Getting Started
-
-### Prerequisites
-
-- **Android Studio**: Ladybug (2024.2.1) or later
-- **JDK**: 17 or higher
-- **Android SDK**: API Level 34 or higher
-- **ArcGIS API Key**: Required for map functionality
-
-### Quick Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd ElectronicServices
-   ```
-
-2. **Configure ArcGIS API key** in `local.properties`:
-   ```properties
-   ARCGIS_API_KEY=your_api_key_here
-   ```
-
-3. **Sync Gradle dependencies**:
-   ```bash
-   .\gradlew.bat --refresh-dependencies
-   ```
-
-4. **Build the project**:
-   ```bash
-   .\gradlew.bat build
-   ```
-
-5. **Run on device or emulator** (Android 14+):
-   ```bash
-   .\gradlew.bat installElectronicDebug
-   ```
-
-For detailed setup instructions, see **[QUICK_START.md](QUICK_START.md)**.
-
-## Build Variants
-
-The application supports **5 product flavors**, each tailored for different business units:
-
-### Available Variants
-
-1. **Electronic Services** (`electronic`)
-    - Full-featured variant with all menu options
-    - Includes ES Job Card Entry
-    - Default variant for electronic services operations
-
-2. **Maintenance** (`maintenance`)
-    - Maintenance-focused operations
-    - ES Job Card Entry hidden
-
-3. **Construction** (`construction`)
-    - Construction project management
-    - ES Job Card Entry hidden
-
-4. **Resurvey** (`resurvey`)
-    - Survey and mapping operations
-    - ES Job Card Entry hidden
-
-5. **Gas Storage** (`gasStorage`)
-    - Gas storage facility management
-    - ES Job Card Entry hidden
-
-### Variant Features
-
-Each variant includes:
-
-- Unique app name and launcher icon
-- Custom Material Design icon theme
-- Conditional feature visibility
-- Separate application ID suffix for side-by-side installation
-- Variant-specific branding
-
-### Building Variants
-
-```bash
-# Build specific variant (debug)
-.\gradlew.bat assembleElectronicDebug
-.\gradlew.bat assembleMaintenanceDebug
-
-# Build specific variant (release)
-.\gradlew.bat assembleElectronicRelease
-
-# Build all variants
-.\gradlew.bat assemble
-```
-
-## Project Structure
+The project uses a **single-module architecture** with package-based organization for simplicity and
+maintainability:
 
 ```
-ElectronicServices/
+GPS_Device_Proj/
 ├── README.md                         # This file
 ├── QUICK_START.md                    # Setup guide
 │
@@ -342,79 +115,85 @@ ElectronicServices/
 │   ├── TESTING.md                    # Complete testing guide
 │   ├── FUTURE_UPGRADES.md            # Roadmap and planned features
 │   ├── KNOWN_ISSUES.md               # Current limitations
+│   ├── ARCHITECTURE_REFACTORING_SUMMARY.md # Architecture refactoring documentation
 │   └── TEST_IMPLEMENTATION_SUMMARY.md # Testing implementation details
 │
-├── app/                              # Main application
-│   ├── navigation/                   # Navigation graph
-│   ├── di/                           # Dependency injection modules
+├── app/                              # Main application module
 │   ├── src/
-│   │   ├── main/                     # Shared source set
-│   │   ├── electronic/               # Electronic variant resources
-│   │   ├── maintenance/              # Maintenance variant resources
-│   │   ├── construction/             # Construction variant resources
-│   │   ├── resurvey/                 # Resurvey variant resources
-│   │   └── gasStorage/               # Gas Storage variant resources
+│   │   ├── main/
+│   │   │   ├── java/com/enbridge/gpsdeviceproj/
+│   │   │   │   ├── data/            # Data layer (API, repositories, Room, mappers)
+│   │   │   │   ├── domain/          # Domain layer (entities, use cases, interfaces)
+│   │   │   │   ├── ui/              # UI layer (screens, ViewModels)
+│   │   │   │   │   ├── auth/        # Login and authentication
+│   │   │   │   │   ├── jobs/        # Job card management
+│   │   │   │   │   └── map/         # Map and GIS features
+│   │   │   │   ├── designsystem/    # Design system components and theme
+│   │   │   │   ├── di/              # Dependency injection modules
+│   │   │   │   ├── navigation/      # Navigation graph
+│   │   │   │   ├── network/         # Network client configuration
+│   │   │   │   ├── ElectronicServicesApp.kt
+│   │   │   │   └── MainActivity.kt
+│   │   │   ├── res/                 # Resources (layouts, strings, drawables)
+│   │   │   └── assets/              # JSON mock data files
+│   │   ├── test/                    # Unit tests (200+ tests)
+│   │   ├── androidTest/             # Instrumented tests
+│   │   ├── electronic/              # Electronic variant resources
+│   │   ├── maintenance/             # Maintenance variant resources
+│   │   ├── construction/            # Construction variant resources
+│   │   ├── resurvey/                # Resurvey variant resources
+│   │   └── gasStorage/              # Gas Storage variant resources
+│   └── build.gradle.kts             # App module build configuration
+│
+├── app-catalog/                      # Design system showcase app
+│   ├── src/main/
+│   │   └── java/com/enbridge/gpsdeviceproj/
+│   │       └── designsystem/        # Copy of design system for catalog
 │   └── build.gradle.kts
 │
-├── core/                             # Core utilities
-│   ├── network/                      # HTTP client configuration
-│   ├── util/                         # Utility functions
-│   └── build.gradle.kts
-│
-├── design-system/                    # UI component library
-│   ├── components/                   # 36+ reusable components
-│   ├── theme/                        # Theme, colors, typography
-│   ├── res/values/                   # String resources
-│   └── build.gradle.kts
-│
-├── domain/                           # Business logic
-│   ├── entity/                       # Domain models
-│   ├── repository/                   # Repository interfaces
-│   ├── usecase/                      # Business use cases
-│   ├── src/test/                     # 50+ unit tests
-│   └── build.gradle.kts
-│
-├── data/                             # Data layer
-│   ├── api/                          # API services (Ktor)
-│   ├── local/                        # Room database
-│   ├── repository/                   # Repository implementations
-│   ├── mapper/                       # DTO to entity mappers
-│   ├── src/test/                     # 69 unit tests
-│   └── build.gradle.kts
-│
-├── feature_auth/                     # Authentication
-│   ├── login/                        # Login screen
-│   ├── res/values/                   # Auth-specific strings
-│   ├── src/test/                     # Unit tests
-│   ├── src/androidTest/              # UI tests
-│   └── build.gradle.kts
-│
-├── feature_jobs/                     # Work orders
-│   ├── entry/                        # Job card entry screen
-│   ├── list/                         # Job list screen
-│   ├── res/values/                   # 200+ string resources
-│   ├── src/test/                     # Unit tests
-│   ├── src/androidTest/              # UI tests
-│   └── build.gradle.kts
-│
-├── feature_map/                      # Map and GIS
-│   ├── map/                          # Main map screen
-│   ├── components/                   # Bottom sheets, dialogs
-│   ├── res/values/                   # Map-specific strings
-│   ├── src/test/                     # Unit tests
-│   ├── src/androidTest/              # UI tests
-│   └── build.gradle.kts
-│
-├── app-catalog/                      # Component showcase
-│   ├── src/main/                     # Catalog application
-│   └── build.gradle.kts
+├── gradle/                           # Gradle wrapper and version catalog
+│   ├── wrapper/
+│   └── libs.versions.toml            # Centralized dependency versions
 │
 ├── proguard-rules.pro                # ProGuard configuration
 ├── keystore.properties.template      # Keystore config template
 ├── build.gradle.kts                  # Root build file
 ├── settings.gradle.kts               # Module configuration
-└── gradle/                           # Gradle wrapper
-    └── libs.versions.toml            # Centralized dependencies
+├── gradle.properties                 # Gradle properties
+├── gradlew                           # Gradle wrapper (Unix)
+└── gradlew.bat                       # Gradle wrapper (Windows)
+
+### Source Code Organization
+
+All application code is located in `app/src/main/java/com/enbridge/gpsdeviceproj/` with the following package structure:
+
+```
+
+com.enbridge.gpsdeviceproj/
+├── data/ # Data Layer
+│ ├── api/ # REST API interfaces and services
+│ ├── local/ # Room database, DAOs, and entities
+│ ├── repository/ # Repository implementations
+│ ├── mapper/ # DTO ↔ Domain entity mappers
+│ └── dto/ # Data Transfer Objects
+├── domain/ # Domain Layer
+│ ├── entity/ # Business entities
+│ ├── repository/ # Repository interfaces (contracts)
+│ └── usecase/ # Use cases (business logic)
+├── ui/ # Presentation Layer
+│ ├── auth/ # Authentication screens & ViewModels
+│ ├── jobs/ # Job management screens & ViewModels
+│ └── map/ # Map feature screens & ViewModels
+├── designsystem/ # Design System
+│ ├── components/ # Reusable UI components
+│ └── theme/ # Theme, colors, typography
+├── di/ # Dependency Injection
+│ └── [Hilt modules]    # Dagger Hilt DI modules
+├── navigation/ # Navigation
+│ └── NavigationGraph.kt
+├── network/ # Network Configuration
+└── KtorClientFactory.kt
+
 ```
 
 ## Testing & Quality
@@ -587,6 +366,14 @@ Before Production Release:
     - Testing patterns and best practices
     - CI/CD integration examples
 
+- **[docs/ARCHITECTURE_REFACTORING_SUMMARY.md](docs/ARCHITECTURE_REFACTORING_SUMMARY.md)** -
+  Architecture refactoring documentation
+    - Motivation and objectives
+    - Changes implemented
+    - Technical details and migration process
+    - Impact analysis and metrics
+    - Lessons learned and recommendations
+
 - **[docs/FUTURE_UPGRADES.md](docs/FUTURE_UPGRADES.md)** - Roadmap and planned features
     - Planned enhancements by phase
     - Technical debt items
@@ -604,15 +391,47 @@ Before Production Release:
     - All tests created with details
     - Coverage achievements
 
+## Quick Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd GPS_Device_Proj
+   ```
+
+2. **Configure ArcGIS API key** in `local.properties`:
+   ```properties
+   ARCGIS_API_KEY=your_api_key_here
+   ```
+
+3. **Sync Gradle dependencies**:
+   ```bash
+   .\gradlew.bat --refresh-dependencies
+   ```
+
+4. **Build the project**:
+   ```bash
+   .\gradlew.bat build
+   ```
+
+5. **Run on device or emulator** (Android 9+):
+   ```bash
+   .\gradlew.bat installElectronicDebug
+   ```
+
+For detailed setup instructions, see **[QUICK_START.md](QUICK_START.md)**.
+
 ## String Resource Management
 
-The project follows Android best practices for string externalization:
+The project follows Android best practices for string externalization. All string resources are now
+consolidated in the main app module:
 
-- **`app/res/values/strings.xml`** - App-level strings and variant names
-- **`design-system/res/values/strings.xml`** - Common UI component strings
-- **`feature_auth/res/values/strings.xml`** - Login and authentication strings
-- **`feature_jobs/res/values/strings.xml`** - Job card entry strings (200+ strings)
-- **`feature_map/res/values/strings.xml`** - Map and ES management strings
+- **`app/src/main/res/values/strings.xml`** - All application strings including:
+    - App-level strings and variant names
+    - Common UI component strings
+    - Login and authentication strings
+    - Job card entry strings (200+ strings)
+    - Map and ES management strings
 
 All user-facing strings are externalized for:
 
@@ -688,9 +507,8 @@ When contributing to this project:
 # Run all unit tests
 .\gradlew.bat test
 
-# Run specific module tests
-.\gradlew.bat :domain:testDebugUnitTest
-.\gradlew.bat :data:testDebugUnitTest
+# Run unit tests for specific build variant
+.\gradlew.bat testElectronicDebugUnitTest
 
 # Run with coverage
 .\gradlew.bat test jacocoTestReport
@@ -719,6 +537,15 @@ When contributing to this project:
 ```
 
 ## Recent Updates
+
+### Architecture Refactoring (November 2025)
+
+- **Single-Module Structure**: Consolidated 7 modules into one for simplified navigation
+- **Package-Based Organization**: Clear layer separation using package structure
+- **KSP Migration**: Switched Room from KAPT to KSP for better Kotlin 2.0 support
+- **Faster Builds**: Reduced build overhead by eliminating multi-module configuration
+- **Simplified Onboarding**: Easier code navigation and understanding for new developers
+- **Maintained Quality**: All 200+ tests and 90% code coverage preserved
 
 ### Testing Implementation (January 2025)
 
@@ -775,6 +602,7 @@ For questions or support, please contact the development team.
 
 ## Last Updated
 
-October 2025  
+November 2025  
 **Version**: 1.0.0  
 **Status**: Production Ready 
+

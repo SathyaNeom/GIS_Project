@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes all the changes implemented to make the Electronic Services Android app *
+This document summarizes all the changes implemented to make the GPS Device Project Android app *
 *RELEASE READY**.
 
 **Date:** December 2024  
@@ -442,7 +442,7 @@ Before first production release:
 
 ## Conclusion
 
-The Electronic Services Android app is now **RELEASE READY** with enterprise-grade security, code
+The GPS Device Project Android app is now **RELEASE READY** with enterprise-grade security, code
 quality, and documentation. All best practices for Android release builds have been implemented.
 
 The developer can now:

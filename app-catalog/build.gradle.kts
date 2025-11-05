@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.enbridge.electronicservices.catalog"
+    namespace = "com.enbridge.gpsdeviceproj.catalog"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.enbridge.electronicservices.catalog"
+        applicationId = "com.enbridge.gpsdeviceproj.catalog"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -46,9 +46,6 @@ android {
 }
 
 dependencies {
-    // Design System
-    implementation(project(":design-system"))
-
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

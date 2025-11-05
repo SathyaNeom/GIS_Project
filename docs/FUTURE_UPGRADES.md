@@ -1,7 +1,7 @@
 # Future Upgrades and Roadmap
 
 This document outlines planned enhancements, technical debt items, and future development priorities
-for the Electronic Services Android application.
+for the GPS_Device_Proj Android application.
 
 ## Overview
 
@@ -565,14 +565,14 @@ As features are implemented, update the following documentation:
 
 ## Conclusion
 
-This roadmap provides a structured approach to evolving the Electronic Services application from its
+This roadmap provides a structured approach to evolving the GPS_Device_Proj application from its
 current foundation to a production-ready, enterprise-grade solution. Priorities should be adjusted
 based on business requirements, user feedback, and resource availability.
 
 ---
 
 **Document Version:** 1.0  
-**Last Updated:** Oct 2025 
+**Last Updated:** Nov 2025
 **Next Review:** Quarterly
 
 **Note:** This roadmap is a living document and should be updated as priorities change, new

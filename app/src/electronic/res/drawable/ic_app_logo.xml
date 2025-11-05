@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Build/Wrench icon optimized for in-app use -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M32,12c-2.21,0 -4,1.79 -4,4c0,0.55 0.11,1.07 0.31,1.55L16.31,29.55C15.83,29.35 15.31,29.24 14.76,29.24c-2.21,0 -4,1.79 -4,4c0,2.21 1.79,4 4,4c2.21,0 4,-1.79 4,-4c0,-0.55 -0.11,-1.07 -0.31,-1.55l12,-12C30.93,19.89 31.45,20 32,20c2.21,0 4,-1.79 4,-4C36,13.79 34.21,12 32,12z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M20,20l-8,8l4,4l8,-8l-4,-4z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M8,32c-1.1,0 -2,0.9 -2,2v8c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2v-8c0,-1.1 -0.9,-2 -2,-2H8z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M26,32c-1.1,0 -2,0.9 -2,2v8c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2v-8c0,-1.1 -0.9,-2 -2,-2H26z" />
+</vector>

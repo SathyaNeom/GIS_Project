@@ -10,14 +10,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.kotlin.serialization)
+    id("jacoco")
 }
 
 android {
-    namespace = "com.enbridge.electronicservices"
+    namespace = "com.enbridge.gpsdeviceproj"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.enbridge.electronicservices"
+        applicationId = "com.enbridge.gpsdeviceproj"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
@@ -28,6 +31,15 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Load ArcGIS API Key from local.properties
+        val properties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { properties.load(it) }
+        }
+        val arcgisApiKey = properties.getProperty("ARCGIS_API_KEY", "")
+        buildConfigField("String", "ARCGIS_API_KEY", "\"$arcgisApiKey\"")
     }
 
     signingConfigs {
@@ -100,6 +112,8 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
         }
 
         release {
@@ -115,10 +129,12 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
 
@@ -127,6 +143,7 @@ android {
             "-Xjvm-default=all"
         )
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -143,30 +160,34 @@ android {
             excludes += "/META-INF/NOTICE.txt"
             excludes += "/META-INF/notice.txt"
             excludes += "/META-INF/*.kotlin_module"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+            isIncludeAndroidResources = true
         }
     }
 }
 
 dependencies {
-    // Domain and Data modules
-    implementation(project(":domain"))
-    implementation(project(":data"))
-
-    // Feature modules
-    implementation(project(":core"))
-    implementation(project(":design-system"))
-    implementation(project(":feature_auth"))
-    implementation(project(":feature_map"))
-    implementation(project(":feature_jobs"))
-
+    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.material.icons.extended)
 
     // Hilt
     implementation(libs.hilt.android)
@@ -176,10 +197,40 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // ArcGIS Maps SDK (for ArcGISEnvironment)
+    // Ktor Client
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.serialization)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
+    // kotlinx-serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // ArcGIS Maps SDK
     implementation(libs.arcgis.maps.kotlin)
 
+    // ArcGIS Toolkit for Compose
+    implementation(platform(libs.arcgis.toolkit.bom))
+    implementation(libs.arcgis.toolkit.geoview)
+
+    // Debug
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Testing - Unit Tests
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+
+    // Testing - Instrumented Tests
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

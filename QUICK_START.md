@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-This guide provides step-by-step instructions to set up and run the Electronic Services Android
+This guide provides step-by-step instructions to set up and run the GPS_Device_Proj Android
 application.
 
 ## Prerequisites
@@ -19,7 +19,7 @@ Ensure the following tools are installed before proceeding:
 
 ```bash
 git clone <repository-url>
-cd ElectronicServices
+cd GPS_Device_Proj
 ```
 
 ### Step 2: Obtain ArcGIS API Key

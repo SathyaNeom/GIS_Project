@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides quick commands for running tests and viewing reports in the Electronic Services
+This guide provides quick commands for running tests and viewing reports in the GPS Device Project
 project.
 
 ## Test Types

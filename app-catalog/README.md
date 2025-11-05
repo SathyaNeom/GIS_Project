@@ -1,6 +1,6 @@
 # Design System Catalog App 🎨
 
-A standalone Android application that showcases all components from the Electronic Services design
+A standalone Android application that showcases all components from the GPS Device Project design
 system. This catalog serves as both a visual reference and an interactive testing tool for
 developers.
 

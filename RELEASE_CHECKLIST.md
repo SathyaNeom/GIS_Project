@@ -1,4 +1,4 @@
-# Release Checklist for Electronic Services Android App
+# Release Checklist for GPS Device Project Android App
 
 This comprehensive checklist ensures your app is ready for production release. Follow each step
 carefully before building and publishing your release APK/AAB.
