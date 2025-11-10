@@ -251,6 +251,9 @@ dependencies {
     implementation(platform(libs.arcgis.toolkit.bom))
     implementation(libs.arcgis.toolkit.geoview)
 
+    // Coil - Image Loading
+    implementation(libs.coil.compose)
+
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

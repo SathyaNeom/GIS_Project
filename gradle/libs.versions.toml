@@ -21,6 +21,7 @@ kotlinxSerialization = "1.7.3"
 mockk = "1.13.12"
 coroutinesTest = "1.9.0"
 turbine = "1.1.0"
+coil = "2.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -70,6 +71,9 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 arcgis-maps-kotlin = { group = "com.esri", name = "arcgis-maps-kotlin", version.ref = "arcgisMaps" }
 arcgis-toolkit-bom = { group = "com.esri", name = "arcgis-maps-kotlin-toolkit-bom", version.ref = "arcgisToolkit" }
 arcgis-toolkit-geoview = { group = "com.esri", name = "arcgis-maps-kotlin-toolkit-geoview-compose" }
+
+# Coil - Image Loading
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # Testing
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

@@ -46,8 +46,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppRadioButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
@@ -253,7 +256,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Project Settings",
+                text = stringResource(R.string.projectsettings_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -271,7 +274,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         // Subtitle
         Text(
-            text = "Get WO List - Select Workorder Number Around Where You Are Standing",
+            text = stringResource(R.string.projectsettings_get_wo_list),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -304,7 +307,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         // Get WO Button
         PrimaryButton(
-            text = "Get WO",
+            text = stringResource(R.string.projectsettings_get_wo),
             onClick = onGetWorkOrders,
             enabled = !uiState.isLoadingWorkOrders,
             modifier = Modifier.align(Alignment.End)
@@ -314,7 +317,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         // Work Order List Label
         Text(
-            text = "Work Order List:",
+            text = stringResource(R.string.projectsettings_work_order_list),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
@@ -349,7 +352,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                     )
                     Spacer(modifier = Modifier.height(Spacing.normal))
                     SecondaryButton(
-                        text = "Retry",
+                        text = stringResource(R.string.action_retry),
                         onClick = onRetry,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -364,7 +367,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Click 'Get WO' to fetch work orders",
+                        text = stringResource(R.string.projectsettings_click_get_wo),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -376,8 +379,8 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                 AppTextField(
                     value = uiState.searchQuery,
                     onValueChange = onSearchQueryChange,
-                    label = "Search by Work Order Number",
-                    placeholder = "Enter work order number...",
+                    label = stringResource(R.string.projectsettings_search_by_work_order_number),
+                    placeholder = stringResource(R.string.projectsettings_enter_work_order_number),
                     leadingIcon = Icons.Default.Search,
                     trailingIcon = if (uiState.searchQuery.isNotEmpty()) Icons.Default.Close else null,
                     onTrailingIconClick = onClearSearch,
@@ -401,7 +404,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No work orders found",
+                                text = stringResource(R.string.projectsettings_no_work_orders_found),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -430,7 +433,10 @@ private fun ColumnScope.WorkOrderSelectionScreen(
         // Selected Work Order Display
         if (uiState.selectedWorkOrder != null) {
             Text(
-                text = "Enter WO: ${uiState.selectedWorkOrder.workOrderNumber}",
+                text = stringResource(
+                    R.string.projectsettings_enter_wo,
+                    uiState.selectedWorkOrder.workOrderNumber
+                ),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium
@@ -440,7 +446,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         // Save Button
         PrimaryButton(
-            text = "Save",
+            text = stringResource(R.string.action_save),
             onClick = onSave,
             enabled = uiState.selectedWorkOrder != null && !uiState.isSaving,
             modifier = Modifier.align(Alignment.End)
@@ -547,7 +553,7 @@ private fun ColumnScope.CrewInformationScreen(
                     )
                 }
                 Text(
-                    text = "Crew Information",
+                    text = stringResource(R.string.projectsettings_crew_info),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -565,7 +571,7 @@ private fun ColumnScope.CrewInformationScreen(
         Spacer(modifier = Modifier.height(Spacing.extraSmall))
 
         Text(
-            text = "Enter crew information",
+            text = stringResource(R.string.projectsettings_enter_crew_info),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -603,7 +609,7 @@ private fun ColumnScope.CrewInformationScreen(
                     )
                     Spacer(modifier = Modifier.height(Spacing.normal))
                     SecondaryButton(
-                        text = "Retry",
+                        text = stringResource(R.string.action_retry),
                         onClick = onRetry,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -620,8 +626,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = contractor,
                             onValueChange = { contractor = it },
-                            label = "Contractor",
-                            placeholder = "Enter contractor name",
+                            label = stringResource(R.string.projectsettings_contractor),
+                            placeholder = stringResource(R.string.projectsettings_enter_contractor_name),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -630,8 +636,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = crewId,
                             onValueChange = { crewId = it },
-                            label = "Crew Id",
-                            placeholder = "Enter crew ID",
+                            label = stringResource(R.string.projectsettings_crew_id),
+                            placeholder = stringResource(R.string.projectsettings_enter_crew_id),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -640,8 +646,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = supervisor,
                             onValueChange = { supervisor = it },
-                            label = "Supervisor",
-                            placeholder = "Enter supervisor name",
+                            label = stringResource(R.string.projectsettings_supervisor),
+                            placeholder = stringResource(R.string.projectsettings_enter_supervisor_name),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -650,8 +656,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = supervisorTSSA,
                             onValueChange = { supervisorTSSA = it },
-                            label = "Supervisor TSSA#",
-                            placeholder = "Enter supervisor TSSA number",
+                            label = stringResource(R.string.projectsettings_supervisor_tssa),
+                            placeholder = stringResource(R.string.projectsettings_enter_supervisor_tssa),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -660,8 +666,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = fitterName,
                             onValueChange = { fitterName = it },
-                            label = "Fitter Name",
-                            placeholder = "Enter fitter name",
+                            label = stringResource(R.string.projectsettings_fitter_name),
+                            placeholder = stringResource(R.string.projectsettings_enter_fitter_name),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -670,8 +676,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = fitterId,
                             onValueChange = { fitterId = it },
-                            label = "Fitter Id",
-                            placeholder = "Enter fitter ID",
+                            label = stringResource(R.string.projectsettings_fitter_id),
+                            placeholder = stringResource(R.string.projectsettings_enter_fitter_id),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -680,8 +686,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = welderName,
                             onValueChange = { welderName = it },
-                            label = "Welder Name",
-                            placeholder = "Enter welder name",
+                            label = stringResource(R.string.projectsettings_welder_name),
+                            placeholder = stringResource(R.string.projectsettings_enter_welder_name),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -690,8 +696,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = welderId,
                             onValueChange = { welderId = it },
-                            label = "Welder Id",
-                            placeholder = "Enter welder ID",
+                            label = stringResource(R.string.projectsettings_welder_id),
+                            placeholder = stringResource(R.string.projectsettings_enter_welder_id),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -700,8 +706,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = inspectedBy,
                             onValueChange = { inspectedBy = it },
-                            label = "Inspected By",
-                            placeholder = "Enter inspector name",
+                            label = stringResource(R.string.projectsettings_inspected_by),
+                            placeholder = stringResource(R.string.projectsettings_enter_inspector_name),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -710,8 +716,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = inspectedByTSSA,
                             onValueChange = { inspectedByTSSA = it },
-                            label = "Inspected By TSSA#",
-                            placeholder = "Enter inspector TSSA number",
+                            label = stringResource(R.string.projectsettings_inspected_by_tssa),
+                            placeholder = stringResource(R.string.projectsettings_enter_inspector_tssa),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -720,8 +726,8 @@ private fun ColumnScope.CrewInformationScreen(
                         AppTextField(
                             value = comments,
                             onValueChange = { comments = it },
-                            label = "Comments",
-                            placeholder = "Enter comments",
+                            label = stringResource(R.string.projectsettings_comments),
+                            placeholder = stringResource(R.string.projectsettings_enter_comments),
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = false,
                             maxLines = 4
@@ -733,7 +739,9 @@ private fun ColumnScope.CrewInformationScreen(
 
                 // Save Button
                 PrimaryButton(
-                    text = if (isSaving) "Saving..." else "Save",
+                    text = if (isSaving) stringResource(R.string.projectsettings_saving) else stringResource(
+                        R.string.action_save
+                    ),
                     onClick = {
                         // Update project settings with form data
                         val updatedSettings = projectSettings.copy(

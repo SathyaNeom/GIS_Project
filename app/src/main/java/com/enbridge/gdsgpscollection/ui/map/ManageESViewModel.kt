@@ -6,6 +6,7 @@ package com.enbridge.gdsgpscollection.ui.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.arcgismaps.geometry.Envelope
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
 import com.enbridge.gdsgpscollection.domain.usecase.DeleteJobCardsUseCase
@@ -73,26 +74,53 @@ class ManageESViewModel @Inject constructor(
         }
     }
 
-    fun onGetDataClicked(latitude: Double, longitude: Double) {
+    fun onGetDataClicked(
+        extent: Envelope,
+        onGeodatabaseDownloaded: (com.arcgismaps.data.Geodatabase) -> Unit = {},
+        onSaveTimestamp: () -> Unit = {}
+    ) {
         Logger.i(
             TAG,
-            "Get Data clicked - Lat: $latitude, Lon: $longitude, Distance: ${_uiState.value.selectedDistance.displayText}"
+            "Get Data clicked - Extent: ${extent.xMin}, ${extent.yMin}, ${extent.xMax}, ${extent.yMax}"
         )
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isDownloading = true, downloadError = null) }
+            if (_uiState.value.isDownloadInProgress) {
+                Logger.w(TAG, "Download is already in progress, ignoring request")
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDownloadInProgress = true,
+                    isDownloading = true,
+                    downloadError = null
+                )
+            }
             Logger.d(TAG, "Starting ES data download...")
 
             try {
-                downloadESDataUseCase(
-                    distance = _uiState.value.selectedDistance,
-                    latitude = latitude,
-                    longitude = longitude
-                ).collect { progress ->
+                downloadESDataUseCase(extent).collect { progress ->
                     Logger.d(
                         TAG,
                         "Download progress: ${(progress.progress * 100).toInt()}% - ${progress.message}"
                     )
+
+                    // Check for errors immediately and stop
+                    if (progress.error != null) {
+                        Logger.e(TAG, "Download failed: ${progress.error}")
+                        _uiState.update {
+                            it.copy(
+                                isDownloadInProgress = false,
+                                isDownloading = false,
+                                downloadProgress = 0f,
+                                downloadMessage = "",
+                                downloadError = progress.error
+                            )
+                        }
+                        return@collect
+                    }
+
                     _uiState.update {
                         it.copy(
                             downloadProgress = progress.progress,
@@ -101,16 +129,28 @@ class ManageESViewModel @Inject constructor(
                         )
                     }
 
-                    if (progress.isComplete) {
+                    if (progress.isComplete && progress.error == null) {
                         Logger.i(TAG, "Download completed successfully")
+
+                        // Pass the geodatabase to the callback if available
+                        progress.geodatabase?.let { geodatabase ->
+                            Logger.d(TAG, "Notifying geodatabase downloaded")
+                            onGeodatabaseDownloaded(geodatabase)
+                            // Save timestamp after successful download
+                            onSaveTimestamp()
+                        }
+
                         // Reload changed data after download
                         loadChangedData()
+
+                        _uiState.update { it.copy(isDownloadInProgress = false) }
                     }
                 }
             } catch (e: Exception) {
                 Logger.e(TAG, "Error downloading data", e)
                 _uiState.update {
                     it.copy(
+                        isDownloadInProgress = false,
                         isDownloading = false,
                         downloadError = e.message ?: "Unknown error occurred"
                     )
@@ -262,7 +302,7 @@ class ManageESViewModel @Inject constructor(
  * UI State for Manage ES screen
  */
 data class ManageESUiState(
-    val selectedDistance: ESDataDistance = ESDataDistance.HUNDRED_METERS,
+    val selectedDistance: ESDataDistance = ESDataDistance.TWO_KILOMETERS,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
     val downloadMessage: String = "",
@@ -276,5 +316,6 @@ data class ManageESUiState(
     val isDeletingJobCards: Boolean = false,
     val deletedJobCardsCount: Int = 0,
     val showDeleteDialog: Boolean = false,
-    val deleteError: String? = null
+    val deleteError: String? = null,
+    val isDownloadInProgress: Boolean = false // Prevents concurrent downloads
 )

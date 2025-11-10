@@ -191,8 +191,44 @@
 
     <!-- Project Settings Bottom Sheet -->
     <string name="projectsettings_title">Project Settings</string>
+    <string name="projectsettings_subtitle">Get WO List - Select Workorder Number Around Where You Are Standing</string>
+    <string name="projectsettings_get_wo_list">Get WO List - Select Workorder Number Around Where You Are Standing</string>
+    <string name="projectsettings_work_order_list">Work Order List:</string>
+    <string name="projectsettings_search_by_work_order_number">Search by Work Order Number</string>
+    <string name="projectsettings_enter_work_order_number">Enter work order number...</string>
+    <string name="projectsettings_no_work_orders_found">No work orders found</string>
+    <string name="projectsettings_contractor">Contractor</string>
+    <string name="projectsettings_enter_contractor_name">Enter contractor name</string>
+    <string name="projectsettings_crew_id">Crew Id</string>
+    <string name="projectsettings_enter_crew_id">Enter crew ID</string>
+    <string name="projectsettings_supervisor">Supervisor</string>
+    <string name="projectsettings_enter_supervisor_name">Enter supervisor name</string>
+    <string name="projectsettings_supervisor_tssa">Supervisor TSSA#</string>
+    <string name="projectsettings_enter_supervisor_tssa">Enter supervisor TSSA number</string>
+    <string name="projectsettings_fitter_name">Fitter Name</string>
+    <string name="projectsettings_enter_fitter_name">Enter fitter name</string>
+    <string name="projectsettings_fitter_id">Fitter Id</string>
+    <string name="projectsettings_enter_fitter_id">Enter fitter ID</string>
+    <string name="projectsettings_welder_name">Welder Name</string>
+    <string name="projectsettings_enter_welder_name">Enter welder name</string>
+    <string name="projectsettings_welder_id">Welder Id</string>
+    <string name="projectsettings_enter_welder_id">Enter welder ID</string>
+    <string name="projectsettings_inspected_by">Inspected By</string>
+    <string name="projectsettings_enter_inspector_name">Enter inspector name</string>
+    <string name="projectsettings_inspected_by_tssa">Inspected By TSSA#</string>
+    <string name="projectsettings_enter_inspector_tssa">Enter inspector TSSA number</string>
+    <string name="projectsettings_comments">Comments</string>
+    <string name="projectsettings_enter_comments">Enter comments</string>
+    <string name="projectsettings_saving">Saving...</string>
     <string name="projectsettings_pole_type">Pole Type</string>
     <string name="projectsettings_work_order">Work Order</string>
+    <string name="projectsettings_get_wo">Get WO</string>
+    <string name="projectsettings_wo_list">Work Order List:</string>
+    <string name="projectsettings_click_get_wo">Click "Get WO" to fetch work orders</string>
+    <string name="projectsettings_no_wo_found">No work orders found</string>
+    <string name="projectsettings_enter_wo">Enter WO: %1$s</string>
+    <string name="projectsettings_crew_info">Crew Information</string>
+    <string name="projectsettings_enter_crew_info">Enter crew information</string>
     <string name="projectsettings_search_hint">Search work orders…</string>
     <string name="projectsettings_no_work_orders">No work orders available</string>
     <string name="projectsettings_loading">Loading project settings…</string>
@@ -434,5 +470,114 @@
     <string name="option_regulator_code_b">Code B</string>
     <string name="option_regulator_function_1">Function 1</string>
     <string name="option_regulator_function_2">Function 2</string>
+
+    <!-- Geodatabase Error Messages -->
+    <string name="error_network_unavailable">Network connection is unavailable. Please check your internet connection and try again.</string>
+    <string name="error_feature_service_unreachable">Unable to reach the feature service. Please verify the service is available and try again.</string>
+    <string name="error_geodatabase_corrupted">The geodatabase file is corrupted. Please clear the data and download again.</string>
+    <string name="error_geodatabase_generation_failed">Failed to generate geodatabase. Please try again.</string>
+    <string name="error_geodatabase_sync_failed">Failed to synchronize geodatabase. Please try again.</string>
+    <string name="error_geodatabase_load_failed">Failed to load geodatabase. The file may be corrupted.</string>
+
+    <!-- Geodatabase Info Messages -->
+    <string name="info_geodatabase_exists_title">Geodatabase Exists</string>
+    <string name="info_geodatabase_exists_message">A geodatabase already exists. Would you like to replace it with new data or synchronize existing changes?</string>
+    <string name="button_replace">Replace</string>
+    <string name="button_sync">Sync</string>
+
+    <!-- Geodatabase Progress Messages -->
+    <string name="progress_initializing">Initializing download…</string>
+    <string name="progress_connecting">Connecting to server…</string>
+    <string name="progress_downloading">Downloading data…</string>
+    <string name="progress_processing">Processing geodatabase…</string>
+    <string name="progress_complete">Download complete!</string>
+    <string name="progress_syncing">Synchronizing changes…</string>
+    <string name="progress_sync_complete">Synchronization complete!</string>
+    <string name="progress_generating_geodatabase">Generating geodatabase</string>
+
+    <!-- Table of Contents (Layer Management) -->
+    <string name="action_manage_layers">Table of Contents</string>
+    <string name="layers_bottom_sheet_title">Table of Contents</string>
+    <string name="button_show_all">Show All</string>
+    <string name="button_hide_all">Hide All</string>
+    <string name="layer_feature_count">%1$d features</string>
+    <string name="no_layers_available">No layers available. Download data first.</string>
+    <string name="action_table_of_contents">Table of Contents</string>
+    <string name="table_of_contents_title">Table of Contents</string>
+    <string name="select_all_layers">Select All</string>
+    <string name="open_street_map">Open Street Map</string>
+    <string name="action_expand_legend">Expand legend</string>
+    <string name="action_collapse_legend">Collapse legend</string>
+
+    <!-- Clear Geodatabase -->
+    <string name="action_clear_geodatabase">Clear Data</string>
+    <string name="confirm_clear_geodatabase_title">Clear Geodatabase</string>
+    <string name="confirm_clear_geodatabase_message">This will delete all downloaded geodatabase files. Are you sure?</string>
+    <string name="button_clear">Clear</string>
+    <string name="geodatabase_cleared">Geodatabase cleared successfully</string>
+
+    <!-- Edge Case: Network Connectivity -->
+    <string name="error_no_internet_title">Internet Connection Required</string>
+    <string name="error_no_internet_message">An internet connection is required to download map data. Please connect to a network and try again.</string>
+    <string name="error_connection_lost_title">Connection Lost</string>
+    <string name="error_connection_lost_message">The internet connection was lost during download. The download will automatically retry when connection is restored.</string>
+    <string name="error_download_failed_title">Download Failed</string>
+    <string name="error_download_failed_message">Unable to download data after multiple attempts. Please check your connection and try again.</string>
+    <string name="msg_connection_lost_retrying">Connection lost. Retrying…</string>
+    <string name="msg_connection_restored">Connection restored. Resuming download…</string>
+    <string name="msg_slow_connection">Slow connection detected. Download may take longer than expected.</string>
+    <string name="msg_retrying_attempt">Retrying… (Attempt %1$d of %2$d)</string>
+
+    <!-- Edge Case: Storage Space -->
+    <string name="error_insufficient_storage_title">Insufficient Storage Space</string>
+    <string name="error_insufficient_storage_message">Insufficient storage space is available. Please free up at least %1$s and retry the download.</string>
+    <string name="warning_low_storage_title">Low Storage Space</string>
+    <string name="warning_low_storage_message">Storage space is running low. Download may fail if space runs out.</string>
+    <string name="error_storage_full_title">Storage Full</string>
+    <string name="error_storage_full_message">Download stopped due to insufficient storage. Please free up space and retry.</string>
+    <string name="msg_storage_warning">Low storage space. Need %1$s, have %2$s free.</string>
+
+    <!-- Edge Case: Server Availability -->
+    <string name="error_server_unavailable_title">Service Temporarily Unavailable</string>
+    <string name="error_server_unavailable_message">The map data service is temporarily unavailable. Please try again later or contact support if the issue persists.</string>
+    <string name="error_server_timeout_title">Server Timeout</string>
+    <string name="error_server_timeout_message">The server is taking too long to respond. Please check your connection and try again.</string>
+    <string name="error_authentication_failed_title">Authentication Required</string>
+    <string name="error_authentication_failed_message">Access denied. Please verify your credentials and try again.</string>
+    <string name="error_authorization_failed_title">Access Denied</string>
+    <string name="error_authorization_failed_message">You do not have permission to access this data. Please contact your administrator.</string>
+    <string name="msg_waiting_for_server">Waiting for server response…</string>
+
+    <!-- Edge Case: File Integrity -->
+    <string name="error_file_corrupted_title">Data Integrity Issue</string>
+    <string name="error_file_corrupted_message">The existing geodatabase appears to be incomplete or corrupted. Would you like to clear it and download fresh data?</string>
+    <string name="error_file_locked_title">File Access Error</string>
+    <string name="error_file_locked_message">Unable to access the geodatabase file. It may be locked by another application. Please close other apps and restart.</string>
+    <string name="error_schema_mismatch_title">Outdated Data Format</string>
+    <string name="error_schema_mismatch_message">The geodatabase format is incompatible with this app version. Please update the app or redownload data.</string>
+    <string name="button_clear_and_redownload">Clear &amp; Redownload</string>
+
+    <!-- Edge Case: Concurrent Operations -->
+    <string name="error_download_in_progress_title">Download In Progress</string>
+    <string name="error_download_in_progress_message">A download is already in progress. Please wait for it to complete.</string>
+    <string name="error_cancel_download_title">Cancel Active Download?</string>
+    <string name="error_cancel_download_message">This will cancel the current download. Continue?</string>
+    <string name="button_cancel_download">Cancel Download</string>
+    <string name="button_keep_downloading">Keep Downloading</string>
+    <string name="msg_loading_existing_data">Loading existing data…</string>
+    <string name="msg_download_cancelled">Download cancelled</string>
+
+    <!-- Offline Mode Banner -->
+    <string name="banner_offline_message">You are currently offline. Using cached data.</string>
+    <string name="cd_offline_banner">Offline mode indicator</string>
+
+    <!-- Download Progress -->
+    <string name="progress_preparing_download">Preparing download…</string>
+    <string name="progress_validating_storage">Validating storage space…</string>
+    <string name="progress_checking_connection">Checking connection…</string>
+
+    <!-- Success Messages -->
+    <string name="msg_data_loaded_successfully">Map data loaded successfully</string>
+    <string name="msg_data_downloaded_successfully">Data downloaded successfully</string>
 
 </resources>

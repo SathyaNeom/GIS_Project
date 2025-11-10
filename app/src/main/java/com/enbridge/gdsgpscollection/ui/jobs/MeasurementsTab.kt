@@ -1,6 +1,19 @@
 package com.enbridge.gdsgpscollection.ui.jobs
 
 /**
+ * Measurements Tab Component
+ *
+ * This file contains the measurements form tab that displays all measurement-related
+ * fields for job card entries. The form includes distances, directions, and positional
+ * data necessary for accurate service installation and documentation.
+ *
+ * Features:
+ * - Responsive grid layout (adapts to device screen size)
+ * - Mixed input types (text fields for measurements, dropdowns for directions)
+ * - Directional reference points (North, South, East, West)
+ * - Position and location measurements
+ * - Distance calculations
+ *
  * @author Sathya Narayanan
  */
 
@@ -13,12 +26,33 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.SingleSelectDropdown
+import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.JobCardEntry
 
+/**
+ * MeasurementsTab displays all measurement-related fields for a job card.
+ *
+ * This tab focuses on positional and measurement data including:
+ * - Connector pipe location and reference points
+ * - Riser measurements (distance, depth, length)
+ * - Street and building measurements
+ * - Tie-in location information
+ *
+ * All measurements are critical for accurate service installation and
+ * future reference/maintenance activities.
+ *
+ * @param entry The job card entry containing all measurement values
+ * @param onUpdateField Callback invoked when any field value changes.
+ *                      Receives a lambda that transforms the current entry
+ * @param isWideScreen Boolean indicating if the device has a wide screen (tablet)
+ *                     Controls whether to display 1 or 2 columns
+ * @param modifier Optional modifier for the grid
+ */
 @Composable
 fun MeasurementsTab(
     entry: JobCardEntry,
@@ -26,7 +60,10 @@ fun MeasurementsTab(
     isWideScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
+    // Scroll state for the grid
     val gridState = rememberLazyGridState()
+
+    // Determine column count based on screen width
     val columns = if (isWideScreen) 2 else 1
 
     LazyVerticalGrid(
@@ -38,7 +75,9 @@ fun MeasurementsTab(
         horizontalArrangement = Arrangement.spacedBy(Spacing.normal),
         verticalArrangement = Arrangement.spacedBy(Spacing.medium)
     ) {
-        // Connector Pipe Loc Dist
+        // ========== Section 1: Connector Pipe Location ==========
+
+        // Connector Pipe Location Distance - Distance from reference point
         item {
             AppTextField(
                 value = entry.connectorPipeLocDist,
@@ -47,7 +86,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Connector Pipe Loc Dir
+        // Connector Pipe Location Direction - North or South
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -60,7 +99,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Connector Pipe Ref Dir
+        // Connector Pipe Reference Direction - East or West
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -73,7 +112,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Connector Pipe Ref Point
+        // Connector Pipe Reference Point - Fixed reference location
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -86,7 +125,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Connector Pipe Position
+        // Connector Pipe Position - Specific position marker
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -99,7 +138,9 @@ fun MeasurementsTab(
             )
         }
 
-        // Street Width
+        // ========== Section 2: Street and Tap Measurements ==========
+
+        // Street Width - Width of the street at service location
         item {
             AppTextField(
                 value = entry.streetWidth,
@@ -108,7 +149,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Tap Size
+        // Tap Size - Size of the main line tap
         item {
             AppTextField(
                 value = entry.tapSize,
@@ -117,7 +158,9 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser On Wall
+        // ========== Section 3: Riser Measurements ==========
+
+        // Riser On Wall - Is riser mounted on wall?
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -130,7 +173,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser Distance
+        // Riser Distance - Distance from reference point
         item {
             AppTextField(
                 value = entry.riserDistance,
@@ -139,7 +182,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser From Wall
+        // Riser From Wall - Distance from wall to riser
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -152,7 +195,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser Depth
+        // Riser Depth - Depth of riser installation
         item {
             AppTextField(
                 value = entry.riserDepth,
@@ -161,7 +204,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser Length
+        // Riser Length - Total length of riser pipe
         item {
             AppTextField(
                 value = entry.riserLength,
@@ -170,7 +213,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Riser In Foundation
+        // Riser In Foundation - Is riser embedded in foundation?
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -183,7 +226,9 @@ fun MeasurementsTab(
             )
         }
 
-        // Main to Building Line
+        // ========== Section 4: Building and Main Line Distances ==========
+
+        // Main to Building Line - Distance from main to building
         item {
             AppTextField(
                 value = entry.mainToBuildingLine,
@@ -192,7 +237,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Main to Street Line
+        // Main to Street Line - Distance from main to street line
         item {
             AppTextField(
                 value = entry.mainToStreetLine,
@@ -201,7 +246,7 @@ fun MeasurementsTab(
             )
         }
 
-        // SL To BL
+        // Street Line to Building Line (SL To BL)
         item {
             AppTextField(
                 value = entry.slToBL,
@@ -210,7 +255,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Curb To GasMain Distance
+        // Curb to Gas Main Distance - Distance from curb to gas main
         item {
             AppTextField(
                 value = entry.curbToGasMainDistance,
@@ -219,7 +264,9 @@ fun MeasurementsTab(
             )
         }
 
-        // Connection Data Location
+        // ========== Section 5: Connection Data & Tie-In Information ==========
+
+        // Connection Data Location - Where connection data is recorded
         item {
             AppTextField(
                 value = entry.connectionDataLocation,
@@ -228,7 +275,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Tie In Building Ref
+        // Tie In Building Reference - Building reference for tie-in
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -241,7 +288,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Tie In Location Desc
+        // Tie In Location Description - Description of tie-in location
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -254,7 +301,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Connection Depth
+        // Connection Depth - Depth of service connection
         item {
             AppTextField(
                 value = entry.connectionDepth,
@@ -263,7 +310,9 @@ fun MeasurementsTab(
             )
         }
 
-        // Building Corner Ref
+        // ========== Section 6: Service Length and Reference Points ==========
+
+        // Building Corner Reference - Reference corner of building
         item {
             AppTextField(
                 value = entry.buildingCornerRef,
@@ -272,7 +321,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Service Length Total
+        // Service Length Total - Total length of service run
         item {
             AppTextField(
                 value = entry.serviceLengthTotal,
@@ -281,7 +330,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Stub Length
+        // Stub Length - Length of service stub
         item {
             AppTextField(
                 value = entry.stubLength,
@@ -290,7 +339,7 @@ fun MeasurementsTab(
             )
         }
 
-        // Main To Stick Outlet
+        // Main to Stick Outlet - Distance from main to stick outlet
         item {
             AppTextField(
                 value = entry.mainToStickOutlet,
@@ -298,5 +347,56 @@ fun MeasurementsTab(
                 label = stringResource(R.string.field_main_to_stick_outlet)
             )
         }
+    }
+}
+
+/**
+ * Preview for MeasurementsTab in single column layout (phone)
+ */
+@Preview(
+    name = "MeasurementsTab - Phone",
+    showBackground = true,
+    widthDp = 360
+)
+@Composable
+private fun MeasurementsTabPhonePreview() {
+    GdsGpsCollectionTheme {
+        MeasurementsTab(
+            entry = JobCardEntry(
+                connectorPipeLocDist = "15.5",
+                connectorPipeLocDir = "North",
+                streetWidth = "30.0",
+                riserDistance = "12.5"
+            ),
+            onUpdateField = { },
+            isWideScreen = false
+        )
+    }
+}
+
+/**
+ * Preview for MeasurementsTab in two column layout (tablet)
+ */
+@Preview(
+    name = "MeasurementsTab - Tablet",
+    showBackground = true,
+    widthDp = 800
+)
+@Composable
+private fun MeasurementsTabTabletPreview() {
+    GdsGpsCollectionTheme {
+        MeasurementsTab(
+            entry = JobCardEntry(
+                connectorPipeLocDist = "15.5",
+                connectorPipeLocDir = "North",
+                connectorPipeRefDir = "East",
+                streetWidth = "30.0",
+                riserDistance = "12.5",
+                riserDepth = "3.5",
+                mainToBuildingLine = "45.0"
+            ),
+            onUpdateField = { },
+            isWideScreen = true
+        )
     }
 }

@@ -49,21 +49,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppDialog
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppSnackbarHost
 import com.enbridge.gdsgpscollection.designsystem.components.DialogType
+import com.enbridge.gdsgpscollection.designsystem.components.DownloadProgressDialog
 import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
-import com.enbridge.gdsgpscollection.designsystem.components.ProgressButton
 import com.enbridge.gdsgpscollection.designsystem.components.SecondaryButton
 import com.enbridge.gdsgpscollection.designsystem.components.SingleSelectDropdown
 import com.enbridge.gdsgpscollection.designsystem.components.SnackbarType
@@ -72,6 +76,7 @@ import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.ui.map.ManageESUiState
 import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Bottom sheet for managing ES (Electronic Services) edits
@@ -82,12 +87,17 @@ import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
 fun ManageESBottomSheet(
     onDismissRequest: () -> Unit,
     onPostDataSnackbar: () -> Unit,
+    getCurrentMapExtent: () -> com.arcgismaps.geometry.Envelope?,
     modifier: Modifier = Modifier,
+    onDistanceSelected: (ESDataDistance) -> Unit = {},
+    onGeodatabaseDownloaded: (com.arcgismaps.data.Geodatabase) -> Unit = {},
     viewModel: ManageESViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    var showDownloadErrorDialog by remember { mutableStateOf(false) }
+    var showSyncErrorDialog by remember { mutableStateOf(false) }
 
     // Show success snackbar when post data completes
     LaunchedEffect(uiState.postSuccess) {
@@ -100,18 +110,34 @@ fun ManageESBottomSheet(
         }
     }
 
-    // Note: Mock coordinates for development and testing purposes
-    // Integration Point: Replace with actual device location from LocationManager
-    // Requirements: Location permissions and GPS/Network location provider
-    val mockLatitude = 43.6532   // Toronto latitude
-    val mockLongitude = -79.3832 // Toronto longitude
+    // Error detection
+    LaunchedEffect(uiState.downloadError) {
+        if (uiState.downloadError != null) {
+            showDownloadErrorDialog = true
+        }
+    }
+    LaunchedEffect(uiState.postError) {
+        if (uiState.postError != null) {
+            showSyncErrorDialog = true
+        }
+    }
 
     ManageESBottomSheetContent(
         uiState = uiState,
         onDismissRequest = onDismissRequest,
-        onDistanceSelected = viewModel::onDistanceSelected,
+        onDistanceSelected = { distance ->
+            viewModel.onDistanceSelected(distance)
+            onDistanceSelected(distance)
+        },
         onGetDataClicked = {
-            viewModel.onGetDataClicked(mockLatitude, mockLongitude)
+            val extent = getCurrentMapExtent()
+            if (extent != null) {
+                viewModel.onGetDataClicked(extent, onGeodatabaseDownloaded)
+            } else {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Unable to get map extent. Please try again.")
+                }
+            }
         },
         onPostDataClicked = viewModel::onPostDataClicked,
         onDeleteJobCardsClicked = viewModel::onDeleteJobCardsClicked,
@@ -120,6 +146,92 @@ fun ManageESBottomSheet(
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
+
+    // Show download progress dialog
+    if (uiState.isDownloading) {
+        DownloadProgressDialog(
+            progress = uiState.downloadProgress,
+            message = uiState.downloadMessage,
+            title = "Downloading Data"
+        )
+    }
+    // Show upload/sync progress dialog
+    if (uiState.isUploading) {
+        DownloadProgressDialog(
+            progress = uiState.uploadProgress,
+            message = "Uploading data…",
+            title = "Synchronizing Data"
+        )
+    }
+    // Download error dialog
+    if (showDownloadErrorDialog && uiState.downloadError != null) {
+        val errorMessage = uiState.downloadError
+        AppDialog(
+            onDismissRequest = { showDownloadErrorDialog = false },
+            title = stringResource(R.string.error_geodatabase_generation_failed),
+            type = DialogType.ERROR,
+            content = {
+                Text(
+                    text = when {
+                        errorMessage?.contains("network", ignoreCase = true) == true ||
+                                errorMessage?.contains("connection", ignoreCase = true) == true ->
+                            stringResource(R.string.error_network_unavailable)
+
+                        errorMessage?.contains("service", ignoreCase = true) == true ||
+                                errorMessage?.contains("server", ignoreCase = true) == true ->
+                            stringResource(R.string.error_feature_service_unreachable)
+
+                        errorMessage?.contains("corrupt", ignoreCase = true) == true ->
+                            stringResource(R.string.error_geodatabase_corrupted)
+
+                        else ->
+                            stringResource(R.string.error_geodatabase_generation_failed)
+                    },
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            },
+            confirmButton = {
+                PrimaryButton(
+                    text = stringResource(android.R.string.ok),
+                    onClick = {
+                        showDownloadErrorDialog = false
+                        viewModel.onDismissDownloadDialog()
+                    }
+                )
+            }
+        )
+    }
+    if (showSyncErrorDialog && uiState.postError != null) {
+        val errorMessage = uiState.postError
+        AppDialog(
+            onDismissRequest = { showSyncErrorDialog = false },
+            title = stringResource(R.string.error_geodatabase_sync_failed),
+            type = DialogType.ERROR,
+            content = {
+                Text(
+                    text = when {
+                        errorMessage?.contains("network", ignoreCase = true) == true ||
+                                errorMessage?.contains("connection", ignoreCase = true) == true ->
+                            stringResource(R.string.error_network_unavailable)
+
+                        errorMessage?.contains("service", ignoreCase = true) == true ||
+                                errorMessage?.contains("server", ignoreCase = true) == true ->
+                            stringResource(R.string.error_feature_service_unreachable)
+
+                        else ->
+                            stringResource(R.string.error_geodatabase_sync_failed)
+                    },
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            },
+            confirmButton = {
+                PrimaryButton(
+                    text = stringResource(android.R.string.ok),
+                    onClick = { showSyncErrorDialog = false }
+                )
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -213,30 +325,15 @@ private fun ManageESBottomSheetContent(
                     enabled = !uiState.isDownloading && !uiState.isUploading
                 )
 
-                // OPTION 3: Button with inline progress
-                ProgressButton(
-                    text = "Get Data",
-                    onClick = onGetDataClicked,
-                    isLoading = uiState.isDownloading,
-                    progress = uiState.downloadProgress,
-                    icon = Icons.Default.Download,
-                    enabled = !uiState.isUploading,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp)
-                )
-
-                // TO REVERT: Uncomment this and comment out ProgressButton above
-                /*
                 PrimaryButton(
                     text = "Get Data",
                     onClick = onGetDataClicked,
                     icon = Icons.Default.Download,
+                    enabled = !uiState.isDownloading && !uiState.isUploading && !uiState.isDownloadInProgress,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(top = Spacing.extraSmall)
+                        .height(56.dp)
                 )
-                */
             }
 
             Spacer(modifier = Modifier.height(Spacing.large))
@@ -306,12 +403,10 @@ private fun ManageESBottomSheetContent(
                     enabled = !uiState.isDeletingJobCards && !uiState.isDownloading && !uiState.isUploading
                 )
 
-                // Post Data Button with Progress
-                ProgressButton(
+                // Post Data Button
+                PrimaryButton(
                     text = "Post Data",
                     onClick = onPostDataClicked,
-                    isLoading = uiState.isUploading,
-                    progress = uiState.uploadProgress,
                     icon = Icons.Default.Upload,
                     enabled = !uiState.isDownloading,
                     modifier = Modifier.weight(1f)
@@ -319,19 +414,6 @@ private fun ManageESBottomSheetContent(
             }
         }
     }
-
-    // TO REVERT: Uncomment this block to restore full-screen dialog
-    /*
-    // ORIGINAL FULL-SCREEN DIALOG: START
-    if (uiState.isDownloading) {
-        DownloadProgressDialog(
-            progress = uiState.downloadProgress,
-            message = uiState.downloadMessage,
-            onDismissRequest = {}
-        )
-    }
-    // ORIGINAL FULL-SCREEN DIALOG: END
-    */
 
     // Delete Job Cards Dialog
     if (uiState.showDeleteDialog) {

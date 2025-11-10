@@ -8,7 +8,9 @@ package com.enbridge.gdsgpscollection.domain.entity
 enum class ESDataDistance(val meters: Int, val displayText: String) {
     FIFTY_METERS(50, "50 Meters"),
     HUNDRED_METERS(100, "100 Meters"),
-    FIVE_HUNDRED_METERS(500, "500 Meters");
+    FIVE_HUNDRED_METERS(500, "500 Meters"),
+    ONE_KILOMETER(1000, "1 Kilometer"),      // Added for testing
+    TWO_KILOMETERS(2000, "2 Kilometers");     // Added for testing
 
     companion object {
         fun fromMeters(meters: Int): ESDataDistance? {

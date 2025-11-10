@@ -6,87 +6,55 @@ package com.enbridge.gdsgpscollection.ui.map
  */
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Straighten
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arcgismaps.geometry.Point
-import com.arcgismaps.geometry.SpatialReference
-import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.BasemapStyle
 import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.toolkit.geoviewcompose.MapView
-import com.enbridge.gdsgpscollection.designsystem.components.AppDialog
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
-import com.enbridge.gdsgpscollection.designsystem.components.AppRadioButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppScaffold
 import com.enbridge.gdsgpscollection.designsystem.components.AppSnackbarHost
-import com.enbridge.gdsgpscollection.designsystem.components.AppTextButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppTopBar
-import com.enbridge.gdsgpscollection.designsystem.components.DialogType
 import com.enbridge.gdsgpscollection.designsystem.components.ESNavigationDrawerContent
-import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
 import com.enbridge.gdsgpscollection.designsystem.components.SnackbarType
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
-import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.ui.map.components.CollectESBottomSheet
+import com.enbridge.gdsgpscollection.ui.map.components.CoordinateInfoBar
+import com.enbridge.gdsgpscollection.ui.map.components.MainMapDialogs
 import com.enbridge.gdsgpscollection.ui.map.components.ManageESBottomSheet
+import com.enbridge.gdsgpscollection.ui.map.components.MapControlToolbar
+import com.enbridge.gdsgpscollection.ui.map.components.MapModeIndicators
+import com.enbridge.gdsgpscollection.ui.map.components.OfflineBanner
 import com.enbridge.gdsgpscollection.ui.map.components.ProjectSettingsBottomSheet
+import com.enbridge.gdsgpscollection.ui.map.components.TableOfContentsBottomSheet
+import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.extensions.toEnvelope
 import kotlinx.coroutines.launch
 
 /**
@@ -96,9 +64,17 @@ import kotlinx.coroutines.launch
  * - Interactive ArcGIS map with multiple basemap options
  * - Feature identification and measurement tools
  * - Map navigation controls (zoom, pan, fullscreen)
- * - Bottom sheet for collecting and managing electronic service data
+ * - Bottom sheets for collecting and managing electronic service data
  * - Real-time coordinate and scale information display
  * - Integration with job card entry functionality
+ * - Offline mode indication with network monitoring
+ *
+ * ## Architecture
+ * The screen follows a modular architecture with:
+ * - **State Management:** Centralized via `MainMapScreenState`
+ * - **Event System:** Unidirectional event flow for user actions
+ * - **Component Extraction:** Toolbar, dialogs, and indicators are separate components
+ * - **SOLID Principles:** Clear separation of concerns and responsibilities
  *
  * The map is initialized with a view centered on Toronto, Canada, and supports
  * various basemap styles (Streets, Imagery, Topographic, etc.) for different
@@ -123,86 +99,45 @@ fun MainMapScreen(
     appVariant: String = "electronic",
     modifier: Modifier = Modifier
 ) {
+    // UI state management
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Screen state holder - consolidates all UI state
+    val screenState = rememberMainMapScreenState()
+
+    // ViewModels
     val collectESViewModel: CollectESViewModel = hiltViewModel()
     val projectSettingsViewModel: ProjectSettingsViewModel = hiltViewModel()
+    val mainMapViewModel: MainMapViewModel = hiltViewModel()
 
-    // Get device configuration for tablet detection
+    // Device configuration
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
 
-    // Collect UI state from the CollectES ViewModel
-    // This is scoped to the MainMapScreen so data persists between bottom sheet open/close
+    // Collect UI state from ViewModels
     val collectESUiState by collectESViewModel.uiState.collectAsStateWithLifecycle()
-
-    // Collect UI state from ProjectSettingsViewModel
     val projectSettingsUiState by projectSettingsViewModel.uiState.collectAsStateWithLifecycle()
+    val map by mainMapViewModel.map.collectAsStateWithLifecycle()
+    val layerInfoList by mainMapViewModel.layerInfoList.collectAsStateWithLifecycle()
+    val osmVisible by mainMapViewModel.osmVisible.collectAsStateWithLifecycle()
+    val showFirstTimeGuidanceDialog by mainMapViewModel.showFirstTimeGuidance.collectAsStateWithLifecycle()
+    val geodatabaseLoadError by mainMapViewModel.geodatabaseLoadError.collectAsStateWithLifecycle()
+    val isOffline by mainMapViewModel.isOffline.collectAsStateWithLifecycle()
 
-    var selectedNavItem by remember { mutableStateOf("map") }
-    var isToolbarExpanded by remember { mutableStateOf(false) }
-    var showBasemapDialog by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var identifyMode by remember { mutableStateOf(false) }
-    var measurementMode by remember { mutableStateOf(false) }
-    var selectedBasemapStyle: BasemapStyle by remember { mutableStateOf(BasemapStyle.ArcGISTopographic) }
-    var isFullscreen by remember { mutableStateOf(false) }
-    var showCollectESBottomSheet by remember { mutableStateOf(false) }
-    var showManageESBottomSheet by remember { mutableStateOf(false) }
-    var showProjectSettingsBottomSheet by remember { mutableStateOf(false) }
-
-    // Determine if Job Card Entry should be shown (only for electronic variant)
+    // Determine feature visibility
     val showJobCardEntry = appVariant == "electronic"
-
-    // Coordinate state
-    var currentX by remember { mutableStateOf("--") }
-    var currentY by remember { mutableStateOf("--") }
-    var currentScale by remember { mutableStateOf("--") }
-    var currentScaleValue by remember { mutableStateOf(1e8) }
-    var currentAccuracy by remember { mutableStateOf("--") }
-    var currentElevation by remember { mutableStateOf("--") }
 
     // Handle back press - show logout dialog when drawer is closed
     BackHandler(enabled = true) {
         when {
             drawerState.isOpen -> {
-                scope.launch {
-                    drawerState.close()
-                }
+                scope.launch { drawerState.close() }
             }
-
             else -> {
-                // Show logout confirmation dialog
-                showLogoutDialog = true
+                screenState.showLogoutDialog()
             }
-        }
-    }
-
-    // Create the ArcGIS Map - recreate when basemap style changes
-    // Initial viewpoint is set to Toronto, Canada
-    // Coordinates: Longitude -79.3832, Latitude 43.6532 (in WGS84)
-    // Converted to Web Mercator spatial reference for ArcGIS compatibility
-    // Scale of 144,447 (~1:144k) provides a city-wide view showing Toronto's downtown and surrounding areas
-    var map by remember {
-        mutableStateOf(
-            ArcGISMap(selectedBasemapStyle).apply {
-                initialViewpoint = Viewpoint(
-                    center = Point(-8833785.0, 5397884.0, SpatialReference.webMercator()),
-                    scale = 144447.0
-                )
-            }
-        )
-    }
-
-    // Update map when basemap style changes
-    // Maintains the same initial viewpoint (Toronto) when user switches basemap layers
-    LaunchedEffect(selectedBasemapStyle) {
-        map = ArcGISMap(selectedBasemapStyle).apply {
-            initialViewpoint = Viewpoint(
-                center = Point(-8833785.0, 5397884.0, SpatialReference.webMercator()),
-                scale = 144447.0
-            )
         }
     }
 
@@ -210,7 +145,7 @@ fun MainMapScreen(
     LaunchedEffect(projectSettingsUiState.saveSuccess) {
         if (projectSettingsUiState.saveSuccess) {
             snackbarHostState.showSnackbar("Project settings saved successfully")
-            showProjectSettingsBottomSheet = false
+            screenState.dismissAllBottomSheets()
             projectSettingsViewModel.resetSaveSuccess()
         }
     }
@@ -222,16 +157,14 @@ fun MainMapScreen(
             drawerContent = {
                 ESNavigationDrawerContent(
                     onCollectESClick = {
-                        showCollectESBottomSheet = true
+                        screenState.showCollectESSheet()
                     },
-                    onESJobCardEntryClick = {
-                        onNavigateToJobCardEntry()
-                    },
+                    onESJobCardEntryClick = onNavigateToJobCardEntry,
                     onProjectSettingsClick = {
-                        showProjectSettingsBottomSheet = true
+                        screenState.showProjectSettingsSheet()
                     },
                     onManageESEditsClick = {
-                        showManageESBottomSheet = true
+                        screenState.showManageESSheet()
                     },
                     drawerState = drawerState,
                     scope = scope,
@@ -261,330 +194,144 @@ fun MainMapScreen(
                     )
                 }
             ) { paddingValues ->
+                // Main content container
+                // Components are layered in a Box with specific z-ordering for proper visibility
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                 ) {
-                    // ArcGIS MapView
+                    // ArcGIS MapView - Positioned first as the base layer
                     MapView(
                         arcGISMap = map,
                         modifier = Modifier.fillMaxSize(),
                         onViewpointChangedForCenterAndScale = { viewpoint ->
-                            viewpoint?.targetGeometry?.let { point ->
-                                if (point is Point) {
-                                    currentX = String.format("%.4f", point.x)
-                                    currentY = String.format("%.4f", point.y)
-                                }
-                            }
-                            viewpoint?.targetScale?.let { scale ->
-                                currentScale = String.format("%.0f", scale)
-                                currentScaleValue = scale
+                            // Update coordinate state
+                            viewpoint?.let { vp ->
+                                val point = vp.targetGeometry as? Point
+                                val x = point?.let { String.format("%.4f", it.x) } ?: "--"
+                                val y = point?.let { String.format("%.4f", it.y) } ?: "--"
+                                val scale =
+                                    vp.targetScale?.let { String.format("%.0f", it) } ?: "--"
+                                val scaleValue = vp.targetScale ?: 1e8
+
+                                screenState.updateCoordinates(
+                                    x = x,
+                                    y = y,
+                                    scale = scale,
+                                    scaleValue = scaleValue,
+                                    viewpoint = vp
+                                )
                             }
                         },
                         onSingleTapConfirmed = { event ->
                             val mapPoint = event.mapPoint
                             if (mapPoint != null) {
-                                currentX = String.format("%.4f", mapPoint.x)
-                                currentY = String.format("%.4f", mapPoint.y)
+                                val x = String.format("%.4f", mapPoint.x)
+                                val y = String.format("%.4f", mapPoint.y)
+
+                                screenState.updateCoordinates(
+                                    x = x,
+                                    y = y,
+                                    scale = screenState.coordinateState.scale,
+                                    scaleValue = screenState.coordinateState.scaleValue
+                                )
 
                                 // Handle identify mode
-                                if (identifyMode) {
+                                if (screenState.interactionState.identifyMode) {
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            "Feature identified at X: ${currentX}, Y: ${currentY}"
+                                            "Feature identified at X: $x, Y: $y"
                                         )
-                                        identifyMode = false
-                                        isToolbarExpanded = false
+                                        screenState.setIdentifyMode(false)
+                                        screenState.setToolbarExpanded(false)
                                     }
                                 }
                             }
                         }
                     )
 
-                    // Floating Action Button with Expandable Toolbar
-                    // Expands horizontally on tablets (>= 600dp) and vertically on phones
-                    if (isTablet) {
-                        // Horizontal layout for tablets
-                        Row(
+                    // Offline banner - Positioned after MapView to draw on top
+                    // Uses zIndex to ensure visibility above the map when offline
+                    if (isOffline) {
+                        OfflineBanner(
+                            isOffline = isOffline,
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.End + WindowInsetsSides.Top))
-                                .padding(end = Spacing.normal, top = Spacing.normal),
-                            verticalAlignment = Alignment.Top,
-                            horizontalArrangement = Arrangement.spacedBy(
-                                Spacing.small,
-                                Alignment.End
-                            )
-                        ) {
-                            // Expandable toolbar buttons
-                            AnimatedVisibility(
-                                visible = isToolbarExpanded,
-                                enter = expandHorizontally() + fadeIn(),
-                                exit = shrinkHorizontally() + fadeOut()
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    // Zoom In
-                                    MapControlButton(
-                                        icon = Icons.Default.Add,
-                                        contentDescription = "Zoom In",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Zoom In")
-                                            }
-                                        }
-                                    )
-
-                                    // Zoom Out
-                                    MapControlButton(
-                                        icon = Icons.Default.Remove,
-                                        contentDescription = "Zoom Out",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Zoom Out")
-                                            }
-                                        }
-                                    )
-
-                                    // Fullscreen
-                                    MapControlButton(
-                                        icon = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                        contentDescription = if (isFullscreen) "Exit Fullscreen" else "Fullscreen",
-                                        onClick = {
-                                            isFullscreen = !isFullscreen
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (isFullscreen) "Fullscreen mode enabled" else "Fullscreen mode disabled"
-                                                )
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Identify
-                                    MapControlButton(
-                                        icon = Icons.Default.Info,
-                                        contentDescription = "Identify",
-                                        onClick = {
-                                            identifyMode = true
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Tap on feature")
-                                            }
-                                        }
-                                    )
-
-                                    // Layers
-                                    MapControlButton(
-                                        icon = Icons.Default.Layers,
-                                        contentDescription = "Layers",
-                                        onClick = {
-                                            showBasemapDialog = true
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Clear
-                                    MapControlButton(
-                                        icon = Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Clear selections")
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // My Location
-                                    MapControlButton(
-                                        icon = Icons.Default.MyLocation,
-                                        contentDescription = "My Location",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Location feature not yet implemented")
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Measure
-                                    MapControlButton(
-                                        icon = Icons.Default.Straighten,
-                                        contentDescription = "Measure",
-                                        onClick = {
-                                            measurementMode = !measurementMode
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (measurementMode) "Measurement mode enabled" else "Measurement mode disabled"
-                                                )
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Main FAB
-                            FloatingActionButton(
-                                onClick = { isToolbarExpanded = !isToolbarExpanded },
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ) {
-                                Icon(
-                                    imageVector = if (isToolbarExpanded) Icons.Default.Close else Icons.Default.Menu,
-                                    contentDescription = "Map Controls"
-                                )
-                            }
-                        }
-                    } else {
-                        // Vertical layout for phones
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.End + WindowInsetsSides.Top))
-                                .padding(end = Spacing.normal, top = Spacing.normal),
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(
-                                Spacing.small,
-                                Alignment.Top
-                            )
-                        ) {
-                            // Expandable toolbar buttons
-                            AnimatedVisibility(
-                                visible = isToolbarExpanded,
-                                enter = expandVertically() + fadeIn(),
-                                exit = shrinkVertically() + fadeOut()
-                            ) {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.small),
-                                    horizontalAlignment = Alignment.End
-                                ) {
-                                    // Zoom In
-                                    MapControlButton(
-                                        icon = Icons.Default.Add,
-                                        contentDescription = "Zoom In",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Zoom In")
-                                            }
-                                        }
-                                    )
-
-                                    // Zoom Out
-                                    MapControlButton(
-                                        icon = Icons.Default.Remove,
-                                        contentDescription = "Zoom Out",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Zoom Out")
-                                            }
-                                        }
-                                    )
-
-                                    // Fullscreen
-                                    MapControlButton(
-                                        icon = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                        contentDescription = if (isFullscreen) "Exit Fullscreen" else "Fullscreen",
-                                        onClick = {
-                                            isFullscreen = !isFullscreen
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (isFullscreen) "Fullscreen mode enabled" else "Fullscreen mode disabled"
-                                                )
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Identify
-                                    MapControlButton(
-                                        icon = Icons.Default.Info,
-                                        contentDescription = "Identify",
-                                        onClick = {
-                                            identifyMode = true
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Tap on feature")
-                                            }
-                                        }
-                                    )
-
-                                    // Layers
-                                    MapControlButton(
-                                        icon = Icons.Default.Layers,
-                                        contentDescription = "Layers",
-                                        onClick = {
-                                            showBasemapDialog = true
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Clear
-                                    MapControlButton(
-                                        icon = Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Clear selections")
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // My Location
-                                    MapControlButton(
-                                        icon = Icons.Default.MyLocation,
-                                        contentDescription = "My Location",
-                                        onClick = {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Location feature not yet implemented")
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-
-                                    // Measure
-                                    MapControlButton(
-                                        icon = Icons.Default.Straighten,
-                                        contentDescription = "Measure",
-                                        onClick = {
-                                            measurementMode = !measurementMode
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (measurementMode) "Measurement mode enabled" else "Measurement mode disabled"
-                                                )
-                                            }
-                                            isToolbarExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Main FAB
-                            FloatingActionButton(
-                                onClick = { isToolbarExpanded = !isToolbarExpanded },
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ) {
-                                Icon(
-                                    imageVector = if (isToolbarExpanded) Icons.Default.Close else Icons.Default.Menu,
-                                    contentDescription = "Map Controls"
-                                )
-                            }
-                        }
+                                .align(Alignment.TopCenter)
+                                .zIndex(10f)
+                        )
                     }
 
+                    // Floating map control toolbar
+                    MapControlToolbar(
+                        isTablet = isTablet,
+                        isExpanded = screenState.interactionState.isToolbarExpanded,
+                        isFullscreen = screenState.interactionState.isFullscreen,
+                        onToggleExpanded = {
+                            screenState.setToolbarExpanded(!screenState.interactionState.isToolbarExpanded)
+                        },
+                        onZoomIn = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Zoom In")
+                            }
+                        },
+                        onZoomOut = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Zoom Out")
+                            }
+                        },
+                        onToggleFullscreen = {
+                            val newFullscreenState = !screenState.interactionState.isFullscreen
+                            screenState.setFullscreen(newFullscreenState)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    if (newFullscreenState) "Fullscreen mode enabled" else "Fullscreen mode disabled"
+                                )
+                            }
+                            screenState.setToolbarExpanded(false)
+                        },
+                        onIdentify = {
+                            screenState.setIdentifyMode(true)
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Tap on feature")
+                            }
+                        },
+                        onShowLayers = {
+                            screenState.showTableOfContentsSheet()
+                            screenState.setToolbarExpanded(false)
+                        },
+                        onClear = {
+                            screenState.showClearDialog()
+                            screenState.setToolbarExpanded(false)
+                        },
+                        onMyLocation = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Location feature not yet implemented")
+                            }
+                            screenState.setToolbarExpanded(false)
+                        },
+                        onToggleMeasure = {
+                            val newMeasurementState = !screenState.interactionState.measurementMode
+                            screenState.setMeasurementMode(newMeasurementState)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    if (newMeasurementState) "Measurement mode enabled" else "Measurement mode disabled"
+                                )
+                            }
+                            screenState.setToolbarExpanded(false)
+                        },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    )
+
                     // Coordinate Info Bar (hide in fullscreen mode)
-                    if (!isFullscreen) {
+                    if (!screenState.interactionState.isFullscreen) {
                         CoordinateInfoBar(
-                            accuracy = currentAccuracy,
-                            x = currentX,
-                            y = currentY,
-                            elevation = currentElevation,
-                            scale = currentScale,
+                            accuracy = screenState.coordinateState.accuracy,
+                            x = screenState.coordinateState.x,
+                            y = screenState.coordinateState.y,
+                            elevation = screenState.coordinateState.elevation,
+                            scale = screenState.coordinateState.scale,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .windowInsetsPadding(
@@ -595,100 +342,47 @@ fun MainMapScreen(
                         )
                     }
 
-                    // Measurement mode indicator
-                    if (measurementMode) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = Spacing.normal),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = MaterialTheme.shapes.medium,
-                            tonalElevation = 4.dp
-                        ) {
-                            Text(
-                                text = "Measurement mode active",
-                                modifier = Modifier.padding(
-                                    horizontal = Spacing.normal,
-                                    vertical = Spacing.small
-                                ),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-
-                    // Identify mode indicator
-                    if (identifyMode) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = Spacing.normal),
-                            color = MaterialTheme.colorScheme.tertiaryContainer,
-                            shape = MaterialTheme.shapes.medium,
-                            tonalElevation = 4.dp
-                        ) {
-                            Text(
-                                text = "Identify mode",
-                                modifier = Modifier.padding(
-                                    horizontal = Spacing.normal,
-                                    vertical = Spacing.small
-                                ),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    }
+                    // Map mode indicators
+                    MapModeIndicators(
+                        identifyMode = screenState.interactionState.identifyMode,
+                        measurementMode = screenState.interactionState.measurementMode,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
         }
 
-        // Logout Confirmation Dialog
-        if (showLogoutDialog) {
-            AppDialog(
-                onDismissRequest = { showLogoutDialog = false },
-                title = "Logout Confirmation",
-                type = DialogType.INFO,
-                content = {
-                    Text(
-                        text = "Are you sure you want to log out?",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                },
-                confirmButton = {
-                    PrimaryButton(
-                        text = "Logout",
-                        onClick = {
-                            showLogoutDialog = false
-                            onLogout()
-                        }
-                    )
-                },
-                dismissButton = {
-                    AppTextButton(
-                        text = "Cancel",
-                        onClick = { showLogoutDialog = false }
-                    )
+        // All dialogs consolidated
+        MainMapDialogs(
+            showLogoutDialog = screenState.dialogState.showLogoutDialog,
+            showClearDialog = screenState.dialogState.showClearDialog,
+            showBasemapDialog = screenState.dialogState.showBasemapDialog,
+            showFirstTimeGuidance = showFirstTimeGuidanceDialog,
+            geodatabaseLoadError = geodatabaseLoadError,
+            currentBasemap = screenState.interactionState.selectedBasemapStyle,
+            onLogout = onLogout,
+            onClearData = {
+                mainMapViewModel.deleteGeodatabase()
+                scope.launch {
+                    snackbarHostState.showSnackbar("Geodatabase cleared successfully")
                 }
-            )
-        }
-
-        // Basemap Selector Dialog
-        if (showBasemapDialog) {
-            BasemapSelectorDialog(
-                currentBasemap = selectedBasemapStyle,
-                onBasemapSelected = { basemap ->
-                    selectedBasemapStyle = basemap
-                    showBasemapDialog = false
-                },
-                onDismiss = { showBasemapDialog = false }
-            )
-        }
+            },
+            onDismissLogout = { screenState.dismissLogoutDialog() },
+            onDismissClear = { screenState.dismissClearDialog() },
+            onBasemapSelected = { basemap ->
+                screenState.updateBasemapStyle(basemap)
+                mainMapViewModel.updateBasemapStyle(basemap)
+            },
+            onDismissBasemap = { screenState.dismissBasemapDialog() },
+            onDismissFirstTimeGuidance = { mainMapViewModel.dismissFirstTimeGuidance() },
+            onDismissGeodatabaseError = { mainMapViewModel.dismissGeodatabaseLoadError() }
+        )
 
         // CollectES Bottom Sheet
-        if (showCollectESBottomSheet) {
+        if (screenState.bottomSheetState.showCollectES) {
             CollectESBottomSheet(
                 onDismissRequest = {
-                    showCollectESBottomSheet = false
+                    screenState.dismissAllBottomSheets()
                 },
                 uiState = collectESUiState,
                 onRetry = {
@@ -705,24 +399,41 @@ fun MainMapScreen(
         }
 
         // ManageES Bottom Sheet
-        if (showManageESBottomSheet) {
+        if (screenState.bottomSheetState.showManageES) {
             ManageESBottomSheet(
                 onDismissRequest = {
-                    showManageESBottomSheet = false
+                    screenState.dismissAllBottomSheets()
                 },
                 onPostDataSnackbar = {
                     scope.launch {
-                        snackbarHostState.showSnackbar("Post data")
+                        snackbarHostState.showSnackbar("Data posted successfully")
                     }
+                },
+                getCurrentMapExtent = {
+                    screenState.coordinateState.currentViewpoint?.toEnvelope()
+                },
+                onGeodatabaseDownloaded = { geodatabase ->
+                    Logger.i("MainMapScreen", "onGeodatabaseDownloaded callback invoked")
+                    Logger.d("MainMapScreen", "Geodatabase path: ${geodatabase.path}")
+                    Logger.d(
+                        "MainMapScreen",
+                        "Geodatabase loadStatus: ${geodatabase.loadStatus.value}"
+                    )
+                    Logger.d("MainMapScreen", "Calling mainMapViewModel.loadGeodatabaseLayers()")
+                    mainMapViewModel.loadGeodatabaseLayers(geodatabase)
+                    mainMapViewModel.saveGeodatabaseTimestamp()
+                },
+                onDistanceSelected = { distance ->
+                    mainMapViewModel.updateMaxExtent(distance)
                 }
             )
         }
 
         // Project Settings Bottom Sheet
-        if (showProjectSettingsBottomSheet) {
+        if (screenState.bottomSheetState.showProjectSettings) {
             ProjectSettingsBottomSheet(
                 onDismissRequest = {
-                    showProjectSettingsBottomSheet = false
+                    screenState.dismissAllBottomSheets()
                     projectSettingsViewModel.resetState()
                 },
                 uiState = projectSettingsUiState,
@@ -755,277 +466,38 @@ fun MainMapScreen(
                 }
             )
         }
-    }
-}
 
-@Composable
-fun MapControlButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    FloatingActionButton(
-        onClick = onClick,
-        modifier = modifier.size(48.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(24.dp)
-        )
-    }
-}
-
-@Composable
-fun CoordinateInfoBar(
-    accuracy: String,
-    x: String,
-    y: String,
-    elevation: String,
-    scale: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 3.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CoordinateItem("Accuracy", accuracy)
-            CoordinateItem("X", x)
-            CoordinateItem("Y", y)
-            CoordinateItem("Elev", elevation)
-            CoordinateItem("Scale", scale)
-        }
-    }
-}
-
-@Composable
-fun CoordinateItem(
-    label: String,
-    value: String
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun BasemapSelectorDialog(
-    currentBasemap: BasemapStyle,
-    onBasemapSelected: (BasemapStyle) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Basemap") },
-        text = {
-            Column {
-                BasemapOption(
-                    "Streets",
-                    BasemapStyle.ArcGISStreets,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Imagery",
-                    BasemapStyle.ArcGISImagery,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Topographic",
-                    BasemapStyle.ArcGISTopographic,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Light Gray",
-                    BasemapStyle.ArcGISLightGray,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Dark Gray",
-                    BasemapStyle.ArcGISDarkGray,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Navigation",
-                    BasemapStyle.ArcGISNavigation,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-                BasemapOption(
-                    "Oceans",
-                    BasemapStyle.ArcGISOceans,
-                    currentBasemap,
-                    onBasemapSelected
-                )
-            }
-        },
-        confirmButton = {
-            AppTextButton(
-                text = "Close",
-                onClick = onDismiss
+        // Table of Contents Bottom Sheet
+        if (screenState.bottomSheetState.showTableOfContents) {
+            TableOfContentsBottomSheet(
+                layers = layerInfoList,
+                onDismissRequest = { screenState.dismissAllBottomSheets() },
+                osmVisible = osmVisible,
+                onToggleLayerVisibility = { id, visible ->
+                    mainMapViewModel.toggleLayerVisibility(id, visible)
+                },
+                onToggleLayerExpanded = { id ->
+                    mainMapViewModel.toggleLayerExpanded(id)
+                },
+                onToggleSelectAll = {
+                    mainMapViewModel.toggleSelectAll()
+                },
+                onToggleOsmVisibility = { visible ->
+                    mainMapViewModel.toggleOsmVisibility(visible)
+                }
             )
         }
-    )
-}
-
-@Composable
-fun BasemapOption(
-    name: String,
-    style: BasemapStyle,
-    currentStyle: BasemapStyle,
-    onSelected: (BasemapStyle) -> Unit
-) {
-    AppRadioButton(
-        selected = currentStyle == style,
-        onClick = { onSelected(style) },
-        label = name
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun MainMapScreenPreview() {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var isToolbarExpanded by remember { mutableStateOf(false) }
-    var currentX by remember { mutableStateOf("--") }
-    var currentY by remember { mutableStateOf("--") }
-    var currentScale by remember { mutableStateOf("--") }
-    var currentAccuracy by remember { mutableStateOf("--") }
-    var currentElevation by remember { mutableStateOf("--") }
-
-    GdsGpsCollectionTheme {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            gesturesEnabled = false,
-            drawerContent = {
-                ESNavigationDrawerContent(
-                    onCollectESClick = {},
-                    onESJobCardEntryClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Job Card Entry")
-                        }
-                    },
-                    onProjectSettingsClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Project Settings")
-                        }
-                    },
-                    onManageESEditsClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Manage ES Edits")
-                        }
-                    },
-                    drawerState = drawerState,
-                    scope = rememberCoroutineScope()
-                )
-            }
-        ) {
-            AppScaffold(
-                snackbarHost = {
-                    AppSnackbarHost(
-                        hostState = snackbarHostState,
-                        snackbarType = SnackbarType.INFO
-                    )
-                },
-                topBar = {
-                    AppTopBar(
-                        title = "Map Screen",
-                        navigationIcon = {
-                            AppIconButton(
-                                icon = Icons.Default.Menu,
-                                contentDescription = "Menu",
-                                onClick = { }
-                            )
-                        },
-                        onActionClick = { }
-                    )
-                }
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                ) {
-                    // Placeholder for map
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "ArcGIS Map View",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Floating Action Button
-                    FloatingActionButton(
-                        onClick = { isToolbarExpanded = !isToolbarExpanded },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.End + WindowInsetsSides.Bottom))
-                            .padding(end = Spacing.normal, bottom = Spacing.massive)
-                    ) {
-                        Icon(
-                            imageVector = if (isToolbarExpanded) Icons.Default.Close else Icons.Default.Menu,
-                            contentDescription = "Map Controls"
-                        )
-                    }
-
-                    // Coordinate Info Bar
-                    CoordinateInfoBar(
-                        accuracy = currentAccuracy,
-                        x = currentX,
-                        y = currentY,
-                        elevation = currentElevation,
-                        scale = currentScale,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                    )
-                }
-            }
-        }
-    }
+    MainMapScreen(
+        onNavigateToJobCardEntry = {},
+        onAddNewFeature = {},
+        onSearchClick = {},
+        onLogout = {}
+    )
 }

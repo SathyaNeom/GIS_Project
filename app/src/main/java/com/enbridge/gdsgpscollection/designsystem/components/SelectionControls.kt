@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
@@ -77,6 +79,63 @@ fun AppCheckbox(
                 checkmarkColor = MaterialTheme.colorScheme.onPrimary,
                 disabledCheckedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                 disabledUncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
+        )
+
+        if (label != null) {
+            Spacer(modifier = Modifier.width(Spacing.small))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Custom TriStateCheckbox with primary theme color when checked
+ * Supports three states: checked, unchecked, and indeterminate
+ * Used for master checkboxes that control multiple child items
+ */
+@Composable
+fun AppTriStateCheckbox(
+    state: ToggleableState,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    label: String? = null
+) {
+    val checkboxModifier = if (label != null) {
+        modifier.toggleable(
+            value = state == ToggleableState.On,
+            enabled = enabled,
+            role = Role.Checkbox,
+            onValueChange = { onClick?.invoke() }
+        )
+    } else {
+        modifier
+    }
+
+    Row(
+        modifier = checkboxModifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TriStateCheckbox(
+            state = state,
+            onClick = if (label == null) onClick else null,
+            enabled = enabled,
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary,
+                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+                disabledCheckedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                disabledUncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                disabledIndeterminateColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
             )
         )
 
@@ -232,6 +291,31 @@ private fun AppCheckboxPreview() {
                 onCheckedChange = { },
                 label = "Disabled",
                 enabled = false
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AppTriStateCheckboxPreview() {
+    GdsGpsCollectionTheme {
+        var state by remember { mutableStateOf(ToggleableState.Off) }
+
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AppTriStateCheckbox(
+                state = state,
+                onClick = {
+                    state = when (state) {
+                        ToggleableState.Off -> ToggleableState.On
+                        ToggleableState.On -> ToggleableState.Indeterminate
+                        ToggleableState.Indeterminate -> ToggleableState.Off
+                    }
+                },
+                label = "TriStateCheckbox"
             )
         }
     }

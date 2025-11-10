@@ -14,13 +14,53 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppDatePicker
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.SingleSelectDropdown
+import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.JobCardEntry
 
+/**
+ * JobCard Tab Component
+ *
+ * This file contains the main job card form tab that displays comprehensive
+ * job-related fields in a responsive grid layout. The form adapts to screen
+ * size and displays fields in either 1 or 2 columns based on the device width.
+ *
+ * Features:
+ * - Responsive grid layout (1 column for phones, 2 columns for tablets)
+ * - Read-only work order field
+ * - Multiple input types (text, dropdown, date picker)
+ * - Conditional field visibility (e.g., custom pressure test type)
+ * - Comprehensive validation support
+ *
+ * @author Sathya Narayanan
+ */
+
+/**
+ * JobCardTab displays the main job card form with comprehensive job details.
+ *
+ * The form is organized in a responsive grid that adapts to screen size.
+ * Fields include address information, service details, installation method,
+ * pressure testing information, and various job-specific attributes.
+ *
+ * Key Features:
+ * - Responsive layout (1-2 columns based on screen width)
+ * - Read-only work order field (pre-filled)
+ * - Mixed input types (text fields, dropdowns, date pickers)
+ * - Conditional field visibility (e.g., "Other" pressure test type)
+ * - Real-time field updates via callbacks
+ *
+ * @param entry The job card entry containing all field values
+ * @param onUpdateField Callback invoked when any field value changes.
+ *                      Receives a lambda that transforms the current entry
+ * @param isWideScreen Boolean indicating if the device has a wide screen (tablet)
+ *                     Controls whether to display 1 or 2 columns
+ * @param modifier Optional modifier for the grid
+ */
 @Composable
 fun JobCardTab(
     entry: JobCardEntry,
@@ -28,7 +68,11 @@ fun JobCardTab(
     isWideScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
+    // Scroll state for the grid, allows programmatic scrolling if needed
     val gridState = rememberLazyGridState()
+
+    // Determine column count based on screen width
+    // Tablets (isWideScreen = true) show 2 columns, phones show 1 column
     val columns = if (isWideScreen) 2 else 1
 
     LazyVerticalGrid(
@@ -40,7 +84,10 @@ fun JobCardTab(
         horizontalArrangement = Arrangement.spacedBy(Spacing.normal),
         verticalArrangement = Arrangement.spacedBy(Spacing.medium)
     ) {
-        // WorkOrder (Display-only)
+        // ========== Section 1: Work Order & Basic Information ==========
+
+        // WorkOrder (Display-only field)
+        // This field is pre-populated and cannot be edited
         item {
             AppTextField(
                 value = entry.workOrder,
@@ -51,7 +98,7 @@ fun JobCardTab(
             )
         }
 
-        // Address
+        // Address field - Primary location information
         item {
             AppTextField(
                 value = entry.address,
@@ -60,7 +107,7 @@ fun JobCardTab(
             )
         }
 
-        // Block/Lot
+        // Block/Lot - Property identifier
         item {
             AppTextField(
                 value = entry.blockLot,
@@ -69,7 +116,7 @@ fun JobCardTab(
             )
         }
 
-        // Municipality
+        // Municipality - City/town information
         item {
             AppTextField(
                 value = entry.municipality,
@@ -78,7 +125,7 @@ fun JobCardTab(
             )
         }
 
-        // Parent Asset ID
+        // Parent Asset ID - Reference to parent infrastructure
         item {
             AppTextField(
                 value = entry.parentAssetId,
@@ -87,7 +134,9 @@ fun JobCardTab(
             )
         }
 
-        // Service Type
+        // ========== Section 2: Service Configuration ==========
+
+        // Service Type - Residential, Commercial, or Industrial
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -101,7 +150,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Design
+        // Service Design - Overhead or Underground installation
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -114,7 +163,7 @@ fun JobCardTab(
             )
         }
 
-        // Connection Type
+        // Connection Type - Permanent or Temporary
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -127,7 +176,7 @@ fun JobCardTab(
             )
         }
 
-        // Connection With
+        // Connection With - Gas or Electric service
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -140,7 +189,9 @@ fun JobCardTab(
             )
         }
 
-        // Inside Meter
+        // ========== Section 3: Installation Details (Yes/No Questions) ==========
+
+        // Inside Meter - Is meter located inside?
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -153,7 +204,7 @@ fun JobCardTab(
             )
         }
 
-        // Wall_IO
+        // Wall_IO - Wall inlet/outlet configuration
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -166,7 +217,7 @@ fun JobCardTab(
             )
         }
 
-        // Wall_RLFB
+        // Wall_RLFB - Wall reinforcement/bracket
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -179,7 +230,7 @@ fun JobCardTab(
             )
         }
 
-        // Joint Trench
+        // Joint Trench - Shared utility trench
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -192,7 +243,7 @@ fun JobCardTab(
             )
         }
 
-        // Railway Crossing
+        // Railway Crossing - Crosses railway tracks
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -205,7 +256,7 @@ fun JobCardTab(
             )
         }
 
-        // Wall To Wall
+        // Wall To Wall - Full wall penetration
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -218,7 +269,7 @@ fun JobCardTab(
             )
         }
 
-        // Basement
+        // Basement - Service enters through basement
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -231,7 +282,7 @@ fun JobCardTab(
             )
         }
 
-        // Building Entry
+        // Building Entry - Point of service entry
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -244,7 +295,9 @@ fun JobCardTab(
             )
         }
 
-        // Entry
+        // ========== Section 4: Additional Details ==========
+
+        // Entry - Entry point description
         item {
             AppTextField(
                 value = entry.entry,
@@ -253,7 +306,7 @@ fun JobCardTab(
             )
         }
 
-        // Depth
+        // Depth - Installation depth
         item {
             AppTextField(
                 value = entry.depth,
@@ -262,7 +315,7 @@ fun JobCardTab(
             )
         }
 
-        // Restoration
+        // Restoration - Site restoration required
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -275,7 +328,7 @@ fun JobCardTab(
             )
         }
 
-        // Meter Guard Required
+        // Meter Guard Required - Protection device needed
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -288,7 +341,9 @@ fun JobCardTab(
             )
         }
 
-        // Service Pipe NPS
+        // ========== Section 5: Service Pipe Specifications ==========
+
+        // Service Pipe NPS - Nominal Pipe Size
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -302,7 +357,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Pipe Material
+        // Service Pipe Material - Copper, PVC, Steel, etc.
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -316,7 +371,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Pipe Status
+        // Service Pipe Status - Active or Inactive
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -329,7 +384,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Pipe Pressure
+        // Service Pipe Pressure - Operating pressure level
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -343,7 +398,9 @@ fun JobCardTab(
             )
         }
 
-        // Method of Installation
+        // ========== Section 6: Installation Method & Safety ==========
+
+        // Method of Installation - Manual or Machine
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -356,7 +413,7 @@ fun JobCardTab(
             )
         }
 
-        // Excess Flow Valve Inst
+        // Excess Flow Valve Installed - Safety device
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -369,7 +426,9 @@ fun JobCardTab(
             )
         }
 
-        // Bricked
+        // ========== Section 7: Building Features ==========
+
+        // Bricked - Brick construction present
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -382,7 +441,7 @@ fun JobCardTab(
             )
         }
 
-        // Windows
+        // Windows - Window proximity considerations
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -395,7 +454,7 @@ fun JobCardTab(
             )
         }
 
-        // Vents
+        // Vents - Ventilation considerations
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -408,7 +467,9 @@ fun JobCardTab(
             )
         }
 
-        // Main Energized By
+        // ========== Section 8: Main Line Information ==========
+
+        // Main Energized By - Person/crew who energized main
         item {
             AppTextField(
                 value = entry.mainEnergizedBy,
@@ -417,7 +478,7 @@ fun JobCardTab(
             )
         }
 
-        // Main Energized Date
+        // Main Energized Date - When main was energized
         item {
             AppDatePicker(
                 selectedDateMillis = entry.mainEnergizedDate,
@@ -426,7 +487,7 @@ fun JobCardTab(
             )
         }
 
-        // # of FAC Applications
+        // Number of FAC Applications - Facility Application Count
         item {
             AppTextField(
                 value = entry.numFACApplications,
@@ -435,7 +496,9 @@ fun JobCardTab(
             )
         }
 
-        // Service Valve Fittings
+        // ========== Section 9: Service Valve Information ==========
+
+        // Service Valve Fittings - Type of valve fittings
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -449,7 +512,7 @@ fun JobCardTab(
             )
         }
 
-        // Application Certificate#
+        // Application Certificate Number
         item {
             AppTextField(
                 value = entry.applicationCertificateNum,
@@ -467,7 +530,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Valve Ref Dir
+        // Service Valve Reference Direction
         item {
             AppTextField(
                 value = entry.serviceValveRefDir,
@@ -476,7 +539,10 @@ fun JobCardTab(
             )
         }
 
-        // Pressure Test Type
+        // ========== Section 10: Pressure Testing ==========
+
+        // Pressure Test Type with conditional "Other" input
+        // Spans full width of grid when "Other" option is selected
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(columns) }) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                 SingleSelectDropdown(
@@ -490,7 +556,7 @@ fun JobCardTab(
                     label = stringResource(R.string.field_pressure_test_type)
                 )
 
-                // Show custom input if "Other" is selected
+                // Conditional field: Only show when "Other" is selected
                 if (entry.pressureTestType == stringResource(R.string.option_pressure_test_type_other)) {
                     AppTextField(
                         value = entry.pressureTestTypeOther,
@@ -501,7 +567,7 @@ fun JobCardTab(
             }
         }
 
-        // Test Pressure
+        // Test Pressure - Pressure value
         item {
             AppTextField(
                 value = entry.testPressure,
@@ -510,7 +576,7 @@ fun JobCardTab(
             )
         }
 
-        // Test Duration
+        // Test Duration - How long test was conducted
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -524,7 +590,7 @@ fun JobCardTab(
             )
         }
 
-        // Test Unit
+        // Test Unit - PSI or Bar
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -537,7 +603,7 @@ fun JobCardTab(
             )
         }
 
-        // Test Medium
+        // Test Medium - Air or Water
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -550,7 +616,7 @@ fun JobCardTab(
             )
         }
 
-        // Test Date
+        // Test Date - When test was performed
         item {
             AppDatePicker(
                 selectedDateMillis = entry.testDate,
@@ -559,7 +625,9 @@ fun JobCardTab(
             )
         }
 
-        // Field App Coating Type
+        // ========== Section 11: Additional Technical Details ==========
+
+        // Field Applied Coating Type
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -572,7 +640,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Valve Reference Pt
+        // Service Valve Reference Point
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -585,7 +653,7 @@ fun JobCardTab(
             )
         }
 
-        // Service Valve Loc Dir
+        // Service Valve Location Direction
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -598,7 +666,7 @@ fun JobCardTab(
             )
         }
 
-        // MQAP Version#
+        // MQAP Version Number - Quality assurance program version
         item {
             SingleSelectDropdown(
                 items = listOf(
@@ -611,7 +679,7 @@ fun JobCardTab(
             )
         }
 
-        // UserID
+        // UserID - Who filled out the form
         item {
             AppTextField(
                 value = entry.userId,
@@ -619,5 +687,57 @@ fun JobCardTab(
                 label = stringResource(R.string.field_user_id)
             )
         }
+    }
+}
+
+/**
+ * Preview for JobCardTab in single column layout (phone)
+ */
+@Preview(
+    name = "JobCardTab - Phone",
+    showBackground = true,
+    widthDp = 360
+)
+@Composable
+private fun JobCardTabPhonePreview() {
+    GdsGpsCollectionTheme {
+        JobCardTab(
+            entry = JobCardEntry(
+                workOrder = "WO-12345",
+                address = "123 Main Street",
+                blockLot = "Block 5, Lot 12",
+                municipality = "Toronto",
+                serviceType = "Residential"
+            ),
+            onUpdateField = { },
+            isWideScreen = false
+        )
+    }
+}
+
+/**
+ * Preview for JobCardTab in two column layout (tablet)
+ */
+@Preview(
+    name = "JobCardTab - Tablet",
+    showBackground = true,
+    widthDp = 800
+)
+@Composable
+private fun JobCardTabTabletPreview() {
+    GdsGpsCollectionTheme {
+        JobCardTab(
+            entry = JobCardEntry(
+                workOrder = "WO-12345",
+                address = "123 Main Street",
+                blockLot = "Block 5, Lot 12",
+                municipality = "Toronto",
+                serviceType = "Residential",
+                serviceDesign = "Underground",
+                connectionType = "Permanent"
+            ),
+            onUpdateField = { },
+            isWideScreen = true
+        )
     }
 }

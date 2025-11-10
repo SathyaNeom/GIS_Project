@@ -6,6 +6,7 @@ package com.enbridge.gdsgpscollection.domain.repository
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDownloadProgress
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
+import com.arcgismaps.geometry.Envelope
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.Flow
 interface ManageESRepository {
 
     /**
-     * Downloads ES geodatabase data within the specified distance from user's location
+     * Downloads ES geodatabase data within the specified extent
      * Returns a Flow to track download progress
      *
      * TODO: Integration Point - Use ArcGIS GeodatabaseSyncTask here
@@ -27,15 +28,11 @@ interface ManageESRepository {
      * }
      * geodatabaseSyncTask.generateGeodatabase(params, outputPath)
      *
-     * @param distance The radius around user's location to download data
-     * @param latitude User's current latitude
-     * @param longitude User's current longitude
+     * @param extent The visible extent of the map to download data for
      * @return Flow of download progress updates
      */
     suspend fun downloadESData(
-        distance: ESDataDistance,
-        latitude: Double,
-        longitude: Double
+        extent: Envelope
     ): Flow<ESDataDownloadProgress>
 
     /**
@@ -74,4 +71,17 @@ interface ManageESRepository {
      * @param distance The distance to save
      */
     suspend fun saveSelectedDistance(distance: ESDataDistance)
+
+    /**
+     * Loads an existing geodatabase from local storage if available.
+     *
+     * This method checks if a previously downloaded geodatabase exists on disk,
+     * validates its integrity, and loads it for use.
+     *
+     * @return Result containing:
+     *         - Success(Geodatabase) if found and loaded successfully
+     *         - Success(null) if no geodatabase file exists
+     *         - Failure(Exception) if file exists but is corrupted or cannot be loaded
+     */
+    suspend fun loadExistingGeodatabase(): Result<com.arcgismaps.data.Geodatabase?>
 }
