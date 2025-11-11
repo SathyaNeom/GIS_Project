@@ -63,6 +63,9 @@ import com.enbridge.gdsgpscollection.designsystem.components.SecondaryButton
 import com.enbridge.gdsgpscollection.designsystem.components.SingleSelectDropdown
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.ui.map.CollectESUiState
+import com.enbridge.gdsgpscollection.ui.map.components.common.BottomSheetHeader
+import com.enbridge.gdsgpscollection.ui.map.components.common.EmptyState
+import com.enbridge.gdsgpscollection.ui.map.components.common.LoadingErrorState
 import com.enbridge.gdsgpscollection.ui.map.models.AttributeType
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureAttribute
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureType
@@ -251,86 +254,32 @@ private fun ColumnScope.ChooseFeatureTypeScreen(
             .fillMaxWidth()
             .padding(horizontal = Spacing.large)
     ) {
-        // Header with close button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Choose Feature Type",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.extraSmall))
-
-        // Subtitle text
-        Text(
-            text = "Select feature layer to collect points.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        // Use extracted BottomSheetHeader component
+        BottomSheetHeader(
+            title = "Choose Feature Type",
+            subtitle = "Select feature layer to collect points.",
+            onClose = onDismiss
         )
 
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Content based on loading state
-        // Priority: Loading > Error > Empty > List
+        // Use extracted LoadingErrorState component
         when {
-            isLoading -> {
-                // Show centered loading indicator
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.extraLarge),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            error != null -> {
-                // Show error message with retry button
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.normal),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.normal))
-                    PrimaryButton(
-                        text = "Retry",
-                        onClick = onRetry,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            isLoading || error != null -> {
+                LoadingErrorState(
+                    isLoading = isLoading,
+                    error = error,
+                    onRetry = onRetry,
+                    loadingHeight = 200
+                )
             }
 
             featureTypes.isEmpty() -> {
-                // Show message when no feature types are available
-                Text(
-                    text = "No feature types available",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(Spacing.normal)
-                )
+                EmptyState(message = "No feature types available")
             }
+
             else -> {
-                // Display feature type list
+                // Display feature type list using extracted component
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(Spacing.small),
                     modifier = Modifier.weight(1f, fill = false)
@@ -432,54 +381,14 @@ private fun ColumnScope.EditAttributeScreen(
             .fillMaxWidth()
             .padding(horizontal = Spacing.large)
     ) {
-        // Header with back and close buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Edit Attribute",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+        // Use extracted BottomSheetHeader component with back button
+        BottomSheetHeader(
+            title = "Edit Attribute",
+            onBack = onBack,
+            onClose = onDismiss
+        )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // GPS indicator
-                Text(
-                    text = "GPS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-
-        // Secondary title with feature type name
+        // Feature type name
         Text(
             text = featureType.name,
             style = MaterialTheme.typography.titleMedium,
@@ -490,7 +399,6 @@ private fun ColumnScope.EditAttributeScreen(
 
         Spacer(modifier = Modifier.height(Spacing.extraSmall))
 
-        // Task description
         Text(
             text = "Enbridge Edit Attribute Task",
             style = MaterialTheme.typography.bodyMedium,
@@ -499,17 +407,11 @@ private fun ColumnScope.EditAttributeScreen(
         )
 
         Spacer(modifier = Modifier.height(Spacing.normal))
-
         HorizontalDivider()
-
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Attribute fields in a scrollable list
-        // Using LazyColumn with state tracking to manage scroll behavior
-        Box(
-            modifier = Modifier
-                .weight(1f, fill = true)
-        ) {
+        // Attribute fields using extracted AttributeField component
+        Box(modifier = Modifier.weight(1f, fill = true)) {
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(Spacing.normal),
@@ -532,19 +434,17 @@ private fun ColumnScope.EditAttributeScreen(
 
         Spacer(modifier = Modifier.height(Spacing.large))
 
-        // Action buttons row
+        // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.small)
         ) {
-            // Select Asset button
             SecondaryButton(
                 text = "Select Asset",
                 onClick = onSelectAsset,
                 modifier = Modifier.weight(1f)
             )
 
-            // Save button with validation
             PrimaryButton(
                 text = "Save",
                 onClick = {
@@ -573,8 +473,6 @@ private fun ColumnScope.EditAttributeScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.large))
-
-        // Snackbar host for validation messages
         SnackbarHost(hostState = snackbarHostState)
     }
 }

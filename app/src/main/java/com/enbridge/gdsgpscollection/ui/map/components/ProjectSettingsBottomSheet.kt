@@ -7,7 +7,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,14 +22,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -47,18 +42,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.enbridge.gdsgpscollection.R
-import com.enbridge.gdsgpscollection.designsystem.components.AppRadioButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
-import com.enbridge.gdsgpscollection.designsystem.components.SecondaryButton
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.ProjectSettings
 import com.enbridge.gdsgpscollection.domain.entity.WorkOrder
 import com.enbridge.gdsgpscollection.ui.map.ProjectSettingsUiState
+import com.enbridge.gdsgpscollection.ui.map.components.common.BottomSheetHeader
+import com.enbridge.gdsgpscollection.ui.map.components.common.EmptyState
+import com.enbridge.gdsgpscollection.ui.map.components.common.LoadingErrorState
+import com.enbridge.gdsgpscollection.ui.map.components.projectsettings.PoleTypeSelector
+import com.enbridge.gdsgpscollection.ui.map.components.projectsettings.WorkOrderListItem
 
 /**
  * Sealed class to represent the different screens in the bottom sheet
@@ -69,12 +66,7 @@ sealed class ProjectSettingsScreen {
 }
 
 /**
- * Main Project Settings Bottom Sheet
- * Uses a single bottom sheet with state management for navigation between screens
- *
- * Screen Flow:
- * 1. Work Order Selection: Select pole type, fetch and select work order
- * 2. Crew Information: Edit crew details and save
+ * Main Project Settings Bottom Sheet (Refactored)
  *
  * @param onDismissRequest Callback invoked when the bottom sheet should be dismissed
  * @param uiState The UI state containing work orders, project settings, and loading states
@@ -107,41 +99,23 @@ fun ProjectSettingsBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
-    // Navigation stack for bottom sheet screens
     var screenStack by remember {
         mutableStateOf<List<ProjectSettingsScreen>>(listOf(ProjectSettingsScreen.WorkOrderSelection))
     }
 
     val currentScreen = screenStack.last()
 
-    // Handle save success
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
             onDismissRequest()
         }
     }
 
-    // Handle save error
-    LaunchedEffect(uiState.saveError) {
-        uiState.saveError?.let { error ->
-        }
-    }
-
-    // Handle back navigation within the bottom sheet
     val onBack: () -> Unit = {
         if (screenStack.size > 1) {
             screenStack = screenStack.dropLast(1)
         } else {
             onDismissRequest()
-        }
-    }
-
-    // Navigate to crew information when work order is selected and Save is clicked
-    val onWorkOrderSaveClick: () -> Unit = {
-        if (uiState.selectedWorkOrder != null) {
-            screenStack =
-                screenStack + ProjectSettingsScreen.CrewInformation(uiState.selectedWorkOrder)
-        } else {
         }
     }
 
@@ -153,7 +127,6 @@ fun ProjectSettingsBottomSheet(
         contentColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.extraLarge,
         dragHandle = {
-            // Custom drag handle with visual indicator
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -170,16 +143,13 @@ fun ProjectSettingsBottomSheet(
             }
         }
     ) {
-        // Animated transitions between screens
         AnimatedContent(
             targetState = currentScreen,
             transitionSpec = {
                 if (targetState is ProjectSettingsScreen.CrewInformation) {
-                    // Forward navigation - slide in from right
                     slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
                             slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
                 } else {
-                    // Back navigation - slide in from left
                     slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
                             slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
                 }
@@ -196,7 +166,6 @@ fun ProjectSettingsBottomSheet(
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
                         onSave = {
-                            // Navigate to crew information screen
                             uiState.selectedWorkOrder?.let { workOrder ->
                                 screenStack =
                                     screenStack + ProjectSettingsScreen.CrewInformation(workOrder)
@@ -227,8 +196,7 @@ fun ProjectSettingsBottomSheet(
 }
 
 /**
- * Screen 1: Work Order Selection
- * Displays pole type selection, work order list with search, and Get WO button
+ * Screen 1: Work Order Selection (Refactored)
  */
 @Composable
 private fun ColumnScope.WorkOrderSelectionScreen(
@@ -249,63 +217,23 @@ private fun ColumnScope.WorkOrderSelectionScreen(
             .fillMaxWidth()
             .padding(horizontal = Spacing.large)
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.projectsettings_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.extraSmall))
-
-        // Subtitle
-        Text(
-            text = stringResource(R.string.projectsettings_get_wo_list),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        // Use extracted BottomSheetHeader component
+        BottomSheetHeader(
+            title = stringResource(R.string.projectsettings_title),
+            subtitle = stringResource(R.string.projectsettings_get_wo_list),
+            onClose = onDismiss
         )
 
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Pole Type Selection
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.small)
-        ) {
-            AppRadioButton(
-                selected = uiState.selectedPoleType == "6 Foot Pole",
-                onClick = { onSelectPoleType("6 Foot Pole") },
-                label = "6 Foot Pole"
-            )
-            AppRadioButton(
-                selected = uiState.selectedPoleType == "8 Foot Pole",
-                onClick = { onSelectPoleType("8 Foot Pole") },
-                label = "8 Foot Pole"
-            )
-            AppRadioButton(
-                selected = uiState.selectedPoleType == "Handheld",
-                onClick = { onSelectPoleType("Handheld") },
-                label = "Handheld"
-            )
-        }
+        // Use extracted PoleTypeSelector component
+        PoleTypeSelector(
+            selectedPoleType = uiState.selectedPoleType,
+            onSelectPoleType = onSelectPoleType
+        )
 
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Get WO Button
         PrimaryButton(
             text = stringResource(R.string.projectsettings_get_wo),
             onClick = onGetWorkOrders,
@@ -315,7 +243,6 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Work Order List Label
         Text(
             text = stringResource(R.string.projectsettings_work_order_list),
             style = MaterialTheme.typography.titleMedium,
@@ -325,38 +252,15 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         Spacer(modifier = Modifier.height(Spacing.small))
 
-        // Content based on state
+        // Use extracted LoadingErrorState component
         when {
-            uiState.isLoadingWorkOrders -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            uiState.workOrdersError != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.normal),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = uiState.workOrdersError,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.normal))
-                    SecondaryButton(
-                        text = stringResource(R.string.action_retry),
-                        onClick = onRetry,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            uiState.isLoadingWorkOrders || uiState.workOrdersError != null -> {
+                LoadingErrorState(
+                    isLoading = uiState.isLoadingWorkOrders,
+                    error = uiState.workOrdersError,
+                    onRetry = onRetry,
+                    loadingHeight = 200
+                )
             }
 
             uiState.workOrders.isEmpty() -> {
@@ -366,16 +270,11 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                         .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = stringResource(R.string.projectsettings_click_get_wo),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    EmptyState(message = stringResource(R.string.projectsettings_click_get_wo))
                 }
             }
 
             else -> {
-                // Search Field
                 AppTextField(
                     value = uiState.searchQuery,
                     onValueChange = onSearchQueryChange,
@@ -389,7 +288,6 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.small))
 
-                // Work Order List
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -399,16 +297,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
                     tonalElevation = 1.dp
                 ) {
                     if (uiState.filteredWorkOrders.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.projectsettings_no_work_orders_found),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        EmptyState(message = stringResource(R.string.projectsettings_no_work_orders_found))
                     } else {
                         LazyColumn(
                             state = listState,
@@ -430,7 +319,6 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Selected Work Order Display
         if (uiState.selectedWorkOrder != null) {
             Text(
                 text = stringResource(
@@ -444,7 +332,6 @@ private fun ColumnScope.WorkOrderSelectionScreen(
             Spacer(modifier = Modifier.height(Spacing.normal))
         }
 
-        // Save Button
         PrimaryButton(
             text = stringResource(R.string.action_save),
             onClick = onSave,
@@ -457,42 +344,7 @@ private fun ColumnScope.WorkOrderSelectionScreen(
 }
 
 /**
- * Work Order List Item
- */
-@Composable
-private fun WorkOrderListItem(
-    workOrder: WorkOrder,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        shape = MaterialTheme.shapes.small,
-        tonalElevation = if (isSelected) 2.dp else 0.dp
-    ) {
-        Text(
-            text = workOrder.displayText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier.padding(Spacing.small)
-        )
-    }
-}
-
-/**
- * Screen 2: Crew Information
- * Displays form to edit crew details (contractor, crew ID, supervisor, fitter, welder)
+ * Screen 2: Crew Information (Refactored)
  */
 @Composable
 private fun ColumnScope.CrewInformationScreen(
@@ -507,7 +359,6 @@ private fun ColumnScope.CrewInformationScreen(
     onBack: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Local state for form fields
     var contractor by remember(projectSettings) {
         mutableStateOf(projectSettings?.contractor ?: "")
     }
@@ -535,89 +386,30 @@ private fun ColumnScope.CrewInformationScreen(
             .fillMaxWidth()
             .padding(horizontal = Spacing.large)
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.projectsettings_crew_info),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.extraSmall))
-
-        Text(
-            text = stringResource(R.string.projectsettings_enter_crew_info),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        // Use extracted BottomSheetHeader component with back button
+        BottomSheetHeader(
+            title = stringResource(R.string.projectsettings_crew_info),
+            subtitle = stringResource(R.string.projectsettings_enter_crew_info),
+            onBack = onBack,
+            onClose = onDismiss
         )
 
         Spacer(modifier = Modifier.height(Spacing.normal))
-
         HorizontalDivider()
-
         Spacer(modifier = Modifier.height(Spacing.normal))
 
-        // Content based on state
+        // Use extracted LoadingErrorState component
         when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            error != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.normal),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.normal))
-                    SecondaryButton(
-                        text = stringResource(R.string.action_retry),
-                        onClick = onRetry,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            isLoading || error != null -> {
+                LoadingErrorState(
+                    isLoading = isLoading,
+                    error = error,
+                    onRetry = onRetry,
+                    loadingHeight = 400
+                )
             }
 
             projectSettings != null -> {
-                // Scrollable form
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(Spacing.normal),
                     modifier = Modifier.weight(1f, fill = false)
@@ -737,13 +529,11 @@ private fun ColumnScope.CrewInformationScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.normal))
 
-                // Save Button
                 PrimaryButton(
                     text = if (isSaving) stringResource(R.string.projectsettings_saving) else stringResource(
                         R.string.action_save
                     ),
                     onClick = {
-                        // Update project settings with form data
                         val updatedSettings = projectSettings.copy(
                             contractor = contractor,
                             crewId = crewId,

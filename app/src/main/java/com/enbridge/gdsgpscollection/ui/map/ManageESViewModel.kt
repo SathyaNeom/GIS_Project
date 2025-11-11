@@ -2,6 +2,7 @@ package com.enbridge.gdsgpscollection.ui.map
 
 /**
  * @author Sathya Narayanan
+ * Refactored to use ManageESFacade - Phase 4: ViewModel Dependency Reduction
  */
 
 import androidx.lifecycle.ViewModel
@@ -9,12 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.arcgismaps.geometry.Envelope
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
-import com.enbridge.gdsgpscollection.domain.usecase.DeleteJobCardsUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.DownloadESDataUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.GetChangedDataUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.GetSelectedDistanceUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.PostESDataUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.SaveSelectedDistanceUseCase
+import com.enbridge.gdsgpscollection.domain.facade.ManageESFacade
 import com.enbridge.gdsgpscollection.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -28,15 +24,13 @@ import javax.inject.Inject
 /**
  * ViewModel for Manage ES Edits feature
  * Manages state for downloading, posting, and managing ES data
+ *
+ * Refactored to use [ManageESFacade] instead of 6 individual use cases,
+ * reducing dependencies from 6 → 1 (83% reduction)
  */
 @HiltViewModel
 class ManageESViewModel @Inject constructor(
-    private val downloadESDataUseCase: DownloadESDataUseCase,
-    private val postESDataUseCase: PostESDataUseCase,
-    private val getChangedDataUseCase: GetChangedDataUseCase,
-    private val deleteJobCardsUseCase: DeleteJobCardsUseCase,
-    private val getSelectedDistanceUseCase: GetSelectedDistanceUseCase,
-    private val saveSelectedDistanceUseCase: SaveSelectedDistanceUseCase
+    private val manageESFacade: ManageESFacade
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ManageESUiState())
@@ -55,7 +49,7 @@ class ManageESViewModel @Inject constructor(
         Logger.d(TAG, "Loading initial data")
         viewModelScope.launch {
             // Load saved distance preference
-            val savedDistance = getSelectedDistanceUseCase()
+            val savedDistance = manageESFacade.getSelectedDistance()
             Logger.d(TAG, "Loaded saved distance: ${savedDistance.displayText}")
             _uiState.update { it.copy(selectedDistance = savedDistance) }
 
@@ -69,7 +63,7 @@ class ManageESViewModel @Inject constructor(
         _uiState.update { it.copy(selectedDistance = distance) }
 
         viewModelScope.launch {
-            saveSelectedDistanceUseCase(distance)
+            manageESFacade.saveSelectedDistance(distance)
             Logger.d(TAG, "Distance preference saved: ${distance.displayText}")
         }
     }
@@ -100,7 +94,7 @@ class ManageESViewModel @Inject constructor(
             Logger.d(TAG, "Starting ES data download...")
 
             try {
-                downloadESDataUseCase(extent).collect { progress ->
+                manageESFacade.downloadESData(extent).collect { progress ->
                     Logger.d(
                         TAG,
                         "Download progress: ${(progress.progress * 100).toInt()}% - ${progress.message}"
@@ -174,7 +168,7 @@ class ManageESViewModel @Inject constructor(
                 }
 
                 // Call actual use case
-                val result = postESDataUseCase()
+                val result = manageESFacade.postESData()
                 result.fold(
                     onSuccess = {
                         Logger.i(TAG, "Data posted successfully")
@@ -222,7 +216,7 @@ class ManageESViewModel @Inject constructor(
             _uiState.update { it.copy(isDeletingJobCards = true) }
 
             try {
-                val result = deleteJobCardsUseCase()
+                val result = manageESFacade.deleteJobCards()
                 result.fold(
                     onSuccess = { count ->
                         Logger.i(TAG, "Deleted $count job cards")
@@ -276,7 +270,7 @@ class ManageESViewModel @Inject constructor(
         Logger.d(TAG, "Loading changed data")
         viewModelScope.launch {
             try {
-                val result = getChangedDataUseCase()
+                val result = manageESFacade.getChangedData()
                 result.fold(
                     onSuccess = { changedData ->
                         Logger.i(TAG, "Loaded ${changedData.size} changed items")

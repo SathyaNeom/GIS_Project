@@ -5,9 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.enbridge.gdsgpscollection.domain.entity.ProjectSettings
 import com.enbridge.gdsgpscollection.domain.entity.WorkOrder
-import com.enbridge.gdsgpscollection.domain.usecase.GetProjectSettingsUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.GetWorkOrdersUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.SaveProjectSettingsUseCase
+import com.enbridge.gdsgpscollection.domain.facade.ProjectSettingsFacade
 import com.enbridge.gdsgpscollection.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,12 +42,13 @@ data class ProjectSettingsUiState(
 /**
  * ViewModel for managing the Project Settings Bottom Sheet state and business logic
  * Follows MVVM architecture with clean separation of concerns
+ *
+ * Refactored to use [ProjectSettingsFacade] instead of 3 individual use cases,
+ * reducing dependencies from 3 → 1 (67% reduction)
  */
 @HiltViewModel
 class ProjectSettingsViewModel @Inject constructor(
-    private val getWorkOrdersUseCase: GetWorkOrdersUseCase,
-    private val getProjectSettingsUseCase: GetProjectSettingsUseCase,
-    private val saveProjectSettingsUseCase: SaveProjectSettingsUseCase
+    private val projectSettingsFacade: ProjectSettingsFacade
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProjectSettingsUiState())
@@ -82,7 +81,7 @@ class ProjectSettingsViewModel @Inject constructor(
             }
             Logger.d(TAG, "Loading project settings from repository")
 
-            getProjectSettingsUseCase()
+            projectSettingsFacade.getProjectSettings()
                 .onSuccess { settings ->
                     Logger.i(
                         TAG,
@@ -129,7 +128,7 @@ class ProjectSettingsViewModel @Inject constructor(
                 "Fetching work orders - Pole Type: $poleType, Location: ($DEFAULT_LATITUDE, $DEFAULT_LONGITUDE)"
             )
 
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = poleType,
                 latitude = DEFAULT_LATITUDE,
                 longitude = DEFAULT_LONGITUDE,
@@ -260,7 +259,7 @@ class ProjectSettingsViewModel @Inject constructor(
                 "Saving project settings - WO#: $workOrderNumber, Crew: ${settings.crewId}"
             )
 
-            saveProjectSettingsUseCase(workOrderNumber, settings)
+            projectSettingsFacade.saveProjectSettings(workOrderNumber, settings)
                 .onSuccess {
                     Logger.i(TAG, "Project settings saved successfully")
                     _uiState.update {

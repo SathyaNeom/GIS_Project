@@ -34,13 +34,13 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val screenState = rememberLoginScreenState()
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.loginSuccess) {
         if (uiState.loginSuccess) {
+            screenState.resetForm()
             onLoginSuccess()
         }
     }
@@ -73,8 +73,8 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(Spacing.huge))
 
                 AppTextField(
-                    value = username,
-                    onValueChange = { username = it },
+                    value = screenState.formState.username,
+                    onValueChange = { screenState.updateUsername(it) },
                     label = stringResource(R.string.login_username_label),
                     placeholder = stringResource(R.string.login_username_placeholder),
                     enabled = !uiState.isLoading,
@@ -84,8 +84,8 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(Spacing.normal))
 
                 AppTextField(
-                    value = password,
-                    onValueChange = { password = it },
+                    value = screenState.formState.password,
+                    onValueChange = { screenState.updatePassword(it) },
                     label = stringResource(R.string.login_password_label),
                     placeholder = stringResource(R.string.login_password_placeholder),
                     visualTransformation = PasswordVisualTransformation(),
@@ -99,8 +99,13 @@ fun LoginScreen(
                     text = if (uiState.isLoading) stringResource(R.string.login_button_loading) else stringResource(
                         R.string.login_button
                     ),
-                    onClick = { viewModel.login(username, password) },
-                    enabled = username.isNotBlank() && password.isNotBlank() && !uiState.isLoading,
+                    onClick = {
+                        viewModel.login(
+                            screenState.formState.username,
+                            screenState.formState.password
+                        )
+                    },
+                    enabled = screenState.isFormValid() && !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
 
