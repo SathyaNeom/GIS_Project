@@ -124,6 +124,10 @@ android {
             versionNameSuffix = "-debug"
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
+
+            // Environment configuration for multi-geodatabase support
+            // Use "wildfire" for development/testing without VPN access
+            buildConfigField("String", "ENVIRONMENT", "\"wildfire\"")
         }
 
         release {
@@ -137,6 +141,11 @@ android {
             )
 
             signingConfig = signingConfigs.getByName("release")
+
+            // Environment configuration for multi-geodatabase support
+            // Use "project" for production deployment with project services
+            // TODO: Change to "project" when deploying to production environment
+            buildConfigField("String", "ENVIRONMENT", "\"wildfire\"")
         }
     }
 

@@ -3,9 +3,7 @@ package com.enbridge.gdsgpscollection.ui.map
 import app.cash.turbine.test
 import com.enbridge.gdsgpscollection.domain.entity.ProjectSettings
 import com.enbridge.gdsgpscollection.domain.entity.WorkOrder
-import com.enbridge.gdsgpscollection.domain.usecase.GetProjectSettingsUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.GetWorkOrdersUseCase
-import com.enbridge.gdsgpscollection.domain.usecase.SaveProjectSettingsUseCase
+import com.enbridge.gdsgpscollection.domain.facade.ProjectSettingsFacade
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -27,15 +25,12 @@ import org.junit.Test
 
 /**
  * Unit tests for ProjectSettingsViewModel
- * Tests all business logic and state management
+ * Tests all business logic and state management with new facade architecture
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProjectSettingsViewModelTest {
 
-    private lateinit var getWorkOrdersUseCase: GetWorkOrdersUseCase
-    private lateinit var getProjectSettingsUseCase: GetProjectSettingsUseCase
-    private lateinit var saveProjectSettingsUseCase: SaveProjectSettingsUseCase
-
+    private lateinit var projectSettingsFacade: ProjectSettingsFacade
     private lateinit var viewModel: ProjectSettingsViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -74,10 +69,8 @@ class ProjectSettingsViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
-        // Create mocks
-        getWorkOrdersUseCase = mockk()
-        getProjectSettingsUseCase = mockk()
-        saveProjectSettingsUseCase = mockk()
+        // Create mock
+        projectSettingsFacade = mockk()
     }
 
     @After
@@ -87,16 +80,16 @@ class ProjectSettingsViewModelTest {
 
     private fun createViewModel(): ProjectSettingsViewModel {
         return ProjectSettingsViewModel(
-            getWorkOrdersUseCase = getWorkOrdersUseCase,
-            getProjectSettingsUseCase = getProjectSettingsUseCase,
-            saveProjectSettingsUseCase = saveProjectSettingsUseCase
+            projectSettingsFacade = projectSettingsFacade
         )
     }
 
     @Test
     fun `initial state should have default values`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
 
         // When
         viewModel = createViewModel()
@@ -114,7 +107,9 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `loadProjectSettings should update state on success`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
 
         // When
         viewModel = createViewModel()
@@ -131,7 +126,11 @@ class ProjectSettingsViewModelTest {
     fun `loadProjectSettings should update state on failure`() = runTest {
         // Given
         val errorMessage = "Failed to load settings"
-        coEvery { getProjectSettingsUseCase() } returns Result.failure(Exception(errorMessage))
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.failure(
+            Exception(
+                errorMessage
+            )
+        )
 
         // When
         viewModel = createViewModel()
@@ -147,9 +146,11 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `getWorkOrders should fetch work orders for selected pole type`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,
@@ -172,7 +173,7 @@ class ProjectSettingsViewModelTest {
         assertNull(state.workOrdersError)
 
         coVerify {
-            getWorkOrdersUseCase.invoke(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,
@@ -185,9 +186,11 @@ class ProjectSettingsViewModelTest {
     fun `getWorkOrders should handle error`() = runTest {
         // Given
         val errorMessage = "Failed to fetch work orders"
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,
@@ -212,7 +215,9 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `selectPoleType should update selected pole type`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -228,7 +233,9 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `selectWorkOrder should update selected work order`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -244,9 +251,11 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `updateSearchQuery should filter work orders by work order number`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,
@@ -274,9 +283,11 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `clearSearch should reset filtered work orders`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,
@@ -306,7 +317,9 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `updateProjectSettings should update project settings in state`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -324,11 +337,13 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `saveProjectSettings should save successfully`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            saveProjectSettingsUseCase(
+            projectSettingsFacade.saveProjectSettings(
                 workOrderNumber = testWorkOrders[0].workOrderNumber,
-                projectSettings = testProjectSettings
+                settings = testProjectSettings
             )
         } returns Result.success(Unit)
 
@@ -349,9 +364,9 @@ class ProjectSettingsViewModelTest {
         assertNull(state.saveError)
 
         coVerify {
-            saveProjectSettingsUseCase.invoke(
+            projectSettingsFacade.saveProjectSettings(
                 workOrderNumber = testWorkOrders[0].workOrderNumber,
-                projectSettings = testProjectSettings
+                settings = testProjectSettings
             )
         }
     }
@@ -359,7 +374,9 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `saveProjectSettings should fail when no work order is selected`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -378,11 +395,13 @@ class ProjectSettingsViewModelTest {
     fun `saveProjectSettings should handle save error`() = runTest {
         // Given
         val errorMessage = "Failed to save"
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            saveProjectSettingsUseCase(
+            projectSettingsFacade.saveProjectSettings(
                 workOrderNumber = testWorkOrders[0].workOrderNumber,
-                projectSettings = testProjectSettings
+                settings = testProjectSettings
             )
         } returns Result.failure(Exception(errorMessage))
 
@@ -406,7 +425,7 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `clearErrors should clear all error states`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.failure(Exception("Error"))
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.failure(Exception("Error"))
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -424,9 +443,11 @@ class ProjectSettingsViewModelTest {
     @Test
     fun `resetState should reset to initial state`() = runTest {
         // Given
-        coEvery { getProjectSettingsUseCase() } returns Result.success(testProjectSettings)
+        coEvery { projectSettingsFacade.getProjectSettings() } returns Result.success(
+            testProjectSettings
+        )
         coEvery {
-            getWorkOrdersUseCase(
+            projectSettingsFacade.getWorkOrders(
                 poleType = "8 Foot Pole",
                 latitude = 43.6532,
                 longitude = -79.3832,

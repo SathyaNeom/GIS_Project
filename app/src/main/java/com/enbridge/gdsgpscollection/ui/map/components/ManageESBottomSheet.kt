@@ -74,6 +74,7 @@ import com.enbridge.gdsgpscollection.designsystem.components.SnackbarType
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
+import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.ui.map.ManageESUiState
 import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
 import kotlinx.coroutines.launch
@@ -90,7 +91,7 @@ fun ManageESBottomSheet(
     getCurrentMapExtent: () -> com.arcgismaps.geometry.Envelope?,
     modifier: Modifier = Modifier,
     onDistanceSelected: (ESDataDistance) -> Unit = {},
-    onGeodatabaseDownloaded: (com.arcgismaps.data.Geodatabase) -> Unit = {},
+    onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit = {},
     viewModel: ManageESViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -132,7 +133,7 @@ fun ManageESBottomSheet(
         onGetDataClicked = {
             val extent = getCurrentMapExtent()
             if (extent != null) {
-                viewModel.onGetDataClicked(extent, onGeodatabaseDownloaded)
+                viewModel.onGetDataClicked(extent, onGeodatabasesDownloaded)
             } else {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("Unable to get map extent. Please try again.")
@@ -148,7 +149,19 @@ fun ManageESBottomSheet(
     )
 
     // Show download progress dialog
-    if (uiState.isDownloading) {
+    // Multi-service download (Project environment)
+    if (uiState.isMultiServiceDownload && uiState.multiServiceProgress != null) {
+        val progress = uiState.multiServiceProgress
+        DownloadProgressDialog(
+            progress = progress?.overallProgress ?: 0f,
+            message = progress?.overallMessage ?: "Downloading data…",
+            title = "Downloading Data"
+        )
+    }
+    // Single-service download (Wildfire environment - legacy)
+    else if (uiState.isDownloading) {
+        // TODO: Remove this block once all environments use multi-service approach
+        // This is for backward compatibility with Wildfire environment
         DownloadProgressDialog(
             progress = uiState.downloadProgress,
             message = uiState.downloadMessage,

@@ -46,6 +46,18 @@ accessibility, and maintainability.
 - Real-time coordinate and scale display
 - Feature identification and measurement tools
 
+### Multi-Service Geodatabase Support
+
+- **Parallel Downloads**: Download data from multiple feature services simultaneously
+- **Environment Detection**: Automatic switching between Project and Wildfire environments
+- **Combined Progress Tracking**: Single progress bar for multi-service downloads
+- **Selective Map Display**: Only Basemap layers visible on map for cleaner view
+- **Consolidated Table of Contents**: All layers from all services in one unified list
+- **Dynamic File Naming**: Geodatabases named after their services (e.g., `Operations.geodatabase`,
+  `Basemap.geodatabase`)
+- **Smart Sync**: Sequential synchronization of all geodatabases to respective servers
+- **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
+
 ### Work Order Management
 
 - Job card listing with status indicators
@@ -547,13 +559,25 @@ When contributing to this project:
 - **Simplified Onboarding**: Easier code navigation and understanding for new developers
 - **Maintained Quality**: All 200+ tests and 90% code coverage preserved
 
-### Testing Implementation (January 2025)
+### Testing Implementation (November 2025)
 
 - **200+ Tests**: Comprehensive test suite across all layers
 - **90% Coverage**: Exceeds industry standards
 - **Jacoco Reporting**: Interactive HTML and XML reports
 - **Coverage Thresholds**: Automatic verification
 - **Documentation**: Complete testing guide
+
+### Multi-Service Geodatabase Support (November 2025)
+
+- **Parallel Downloads**: Download data from multiple feature services simultaneously
+- **Environment Detection**: Automatic switching between Project and Wildfire environments
+- **Combined Progress Tracking**: Single progress bar for multi-service downloads
+- **Selective Map Display**: Only Basemap layers visible on map for cleaner view
+- **Consolidated Table of Contents**: All layers from all services in one unified list
+- **Dynamic File Naming**: Geodatabases named after their services (e.g., `Operations.geodatabase`,
+  `Basemap.geodatabase`)
+- **Smart Sync**: Sequential synchronization of all geodatabases to respective servers
+- **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
 
 ### Release Readiness (November 2025)
 
@@ -602,7 +626,6 @@ For questions or support, please contact the development team.
 
 ## Last Updated
 
-November 2025  
-**Version**: 1.0.0  
-**Status**: Production Ready 
-
+March 2025  
+**Version**: 1.1.0  
+**Status**: Production Ready  

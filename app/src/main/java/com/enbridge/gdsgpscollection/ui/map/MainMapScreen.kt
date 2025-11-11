@@ -34,8 +34,6 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arcgismaps.geometry.Point
-import com.arcgismaps.mapping.BasemapStyle
-import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.toolkit.geoviewcompose.MapView
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppScaffold
@@ -135,6 +133,7 @@ fun MainMapScreen(
             drawerState.isOpen -> {
                 scope.launch { drawerState.close() }
             }
+
             else -> {
                 screenState.showLogoutDialog()
             }
@@ -412,16 +411,43 @@ fun MainMapScreen(
                 getCurrentMapExtent = {
                     screenState.coordinateState.currentViewpoint?.toEnvelope()
                 },
-                onGeodatabaseDownloaded = { geodatabase ->
-                    Logger.i("MainMapScreen", "onGeodatabaseDownloaded callback invoked")
-                    Logger.d("MainMapScreen", "Geodatabase path: ${geodatabase.path}")
-                    Logger.d(
+                onGeodatabasesDownloaded = { geodatabaseInfos ->
+                    Logger.i(
                         "MainMapScreen",
-                        "Geodatabase loadStatus: ${geodatabase.loadStatus.value}"
+                        "onGeodatabasesDownloaded callback invoked with ${geodatabaseInfos.size} geodatabase(s)"
                     )
-                    Logger.d("MainMapScreen", "Calling mainMapViewModel.loadGeodatabaseLayers()")
-                    mainMapViewModel.loadGeodatabaseLayers(geodatabase)
+
+                    // Load layers from all downloaded geodatabases
+                    geodatabaseInfos.forEach { info ->
+                        Logger.d(
+                            "MainMapScreen",
+                            "Processing ${info.serviceName} geodatabase: ${info.fileName}"
+                        )
+                        Logger.d("MainMapScreen", "Geodatabase path: ${info.geodatabase.path}")
+                        Logger.d(
+                            "MainMapScreen",
+                            "Geodatabase loadStatus: ${info.geodatabase.loadStatus.value}"
+                        )
+
+                        // Only load layers for geodatabases that should be displayed on map
+                        if (info.displayOnMap) {
+                            Logger.d(
+                                "MainMapScreen",
+                                "Loading layers from ${info.serviceName} to map"
+                            )
+                            mainMapViewModel.loadGeodatabaseLayers(info.geodatabase)
+                        } else {
+                            Logger.d(
+                                "MainMapScreen",
+                                "Skipping map display for ${info.serviceName} (displayOnMap=false)"
+                            )
+                        }
+                    }
+
+                    // Save timestamp after all geodatabases are processed
                     mainMapViewModel.saveGeodatabaseTimestamp()
+
+                    Logger.i("MainMapScreen", "All geodatabases processed successfully")
                 },
                 onDistanceSelected = { distance ->
                     mainMapViewModel.updateMaxExtent(distance)

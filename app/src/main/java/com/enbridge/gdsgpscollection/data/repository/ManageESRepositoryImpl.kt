@@ -19,15 +19,22 @@ import com.arcgismaps.tasks.geodatabase.SyncLayerOption
 import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.data.local.dao.LocalEditDao
 import com.enbridge.gdsgpscollection.data.local.preferences.PreferencesManager
+import com.enbridge.gdsgpscollection.domain.config.FeatureServiceConfig
+import com.enbridge.gdsgpscollection.domain.config.FeatureServiceConfiguration
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDownloadProgress
+import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
+import com.enbridge.gdsgpscollection.domain.entity.MultiServiceDownloadProgress
 import com.enbridge.gdsgpscollection.domain.repository.ManageESRepository
 import com.enbridge.gdsgpscollection.util.Constants
 import com.enbridge.gdsgpscollection.util.Logger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
@@ -43,17 +50,22 @@ import javax.inject.Inject
  * - Querying for locally modified data
  * - Managing job card lifecycle
  * - Persisting user preferences for distance selection
+ * - Multi-service geodatabase management (Operations + Basemap)
  *
  * @property context Application context for file operations
  * @property localEditDao DAO for accessing local edit records
  * @property preferencesManager Manager for persisting user preferences
+ * @property networkMonitor Network connectivity monitor
+ * @property storageUtil Storage availability checker
+ * @property configuration Feature service configuration provider
  */
 class ManageESRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val localEditDao: LocalEditDao,
     private val preferencesManager: PreferencesManager,
     private val networkMonitor: com.enbridge.gdsgpscollection.util.network.NetworkMonitor,
-    private val storageUtil: com.enbridge.gdsgpscollection.util.storage.StorageUtil
+    private val storageUtil: com.enbridge.gdsgpscollection.util.storage.StorageUtil,
+    private val configuration: FeatureServiceConfiguration
 ) : ManageESRepository {
 
     companion object {
@@ -61,10 +73,29 @@ class ManageESRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Path to the geodatabase file in internal storage (secure)
+     * Path to the geodatabase file in internal storage (secure).
+     * Legacy method for single geodatabase (Wildfire environment).
+     *
+     * TODO: Deprecated - Use getGeodatabasePath(serviceId) for multi-service support
      */
     private val geodatabaseFilePath: String
         get() = File(context.filesDir, Constants.GEODATABASE_FILE_NAME).absolutePath
+
+    /**
+     * Returns the geodatabase file path for a specific service.
+     *
+     * File naming convention: "{serviceId}.geodatabase"
+     * Examples:
+     * - "operations.geodatabase"
+     * - "basemap.geodatabase"
+     * - "wildfire.geodatabase"
+     *
+     * @param serviceId Unique identifier for the service
+     * @return Absolute path to the geodatabase file
+     */
+    private fun getGeodatabasePath(serviceId: String): String {
+        return File(context.filesDir, "$serviceId.geodatabase").absolutePath
+    }
 
     /**
      * Downloads geodatabase data from the feature service using the current map extent.
@@ -568,6 +599,538 @@ class ManageESRepositoryImpl @Inject constructor(
 
         } catch (e: Exception) {
             Logger.e(TAG, "Unexpected error loading geodatabase", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Downloads geodatabase from a specific feature service.
+     *
+     * This method is similar to [downloadESData] but accepts a service configuration
+     * and uses dynamic file naming based on service ID.
+     *
+     * @param extent The geographic extent to download data for
+     * @param featureServiceConfig Configuration for the target feature service
+     * @return Flow emitting download progress updates for this service
+     */
+    override suspend fun downloadServiceData(
+        extent: Envelope,
+        featureServiceConfig: FeatureServiceConfig
+    ): Flow<ESDataDownloadProgress> = channelFlow {
+        Logger.i(TAG, "Starting download for service: ${featureServiceConfig.name}")
+        Logger.d(TAG, "Service ID: ${featureServiceConfig.id}, URL: ${featureServiceConfig.url}")
+
+        try {
+            // Send starting message
+            send(
+                ESDataDownloadProgress(
+                    0.0f,
+                    context.getString(R.string.multi_service_starting, featureServiceConfig.name),
+                    false
+                )
+            )
+
+            // Initialize GeodatabaseSyncTask with service URL
+            val geodatabaseSyncTask = GeodatabaseSyncTask(featureServiceConfig.url)
+            geodatabaseSyncTask.load().onFailure { error ->
+                Logger.e(
+                    TAG,
+                    "Failed to load GeodatabaseSyncTask for ${featureServiceConfig.name}",
+                    error
+                )
+                send(
+                    ESDataDownloadProgress(
+                        0.0f,
+                        context.getString(R.string.multi_service_failed, featureServiceConfig.name),
+                        true,
+                        error.message
+                    )
+                )
+                return@channelFlow
+            }
+
+            Logger.d(TAG, "GeodatabaseSyncTask loaded for ${featureServiceConfig.name}")
+
+            // Create generate parameters
+            send(
+                ESDataDownloadProgress(
+                    0.2f,
+                    context.getString(R.string.progress_preparing_download),
+                    false
+                )
+            )
+
+            val generateParams = geodatabaseSyncTask
+                .createDefaultGenerateGeodatabaseParameters(extent)
+                .getOrElse { error ->
+                    Logger.e(
+                        TAG,
+                        "Failed to create parameters for ${featureServiceConfig.name}",
+                        error
+                    )
+                    send(
+                        ESDataDownloadProgress(
+                            0.0f,
+                            context.getString(
+                                R.string.multi_service_failed,
+                                featureServiceConfig.name
+                            ),
+                            true,
+                            error.message
+                        )
+                    )
+                    return@channelFlow
+                }
+
+            generateParams.apply {
+                returnAttachments = false
+                outSpatialReference = SpatialReference.webMercator()
+            }
+
+            // Get geodatabase path for this service
+            val servicePath = getGeodatabasePath(featureServiceConfig.id)
+
+            // Delete existing geodatabase if present
+            val geodatabaseFile = File(servicePath)
+            if (geodatabaseFile.exists()) {
+                Logger.d(TAG, "Deleting existing geodatabase for ${featureServiceConfig.name}")
+                geodatabaseFile.delete()
+            }
+
+            // Create and start generate job
+            send(
+                ESDataDownloadProgress(
+                    0.3f,
+                    context.getString(R.string.progress_generating_geodatabase),
+                    false
+                )
+            )
+
+            val generateJob =
+                geodatabaseSyncTask.createGenerateGeodatabaseJob(generateParams, servicePath)
+            generateJob.start()
+
+            // Monitor progress
+            launch {
+                try {
+                    generateJob.progress.collect { progress ->
+                        val adjustedProgress = 0.3f + (progress / 100f * 0.6f)
+                        send(
+                            ESDataDownloadProgress(
+                                adjustedProgress,
+                                context.getString(R.string.progress_downloading),
+                                false
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    Logger.d(
+                        TAG,
+                        "Progress collection ended for ${featureServiceConfig.name}: ${e.message}"
+                    )
+                }
+            }
+
+            // Wait for completion
+            send(
+                ESDataDownloadProgress(
+                    0.95f,
+                    context.getString(R.string.progress_processing),
+                    false
+                )
+            )
+
+            val result = generateJob.result()
+            result.onSuccess { geodatabase ->
+                Logger.i(TAG, "Download completed for ${featureServiceConfig.name}")
+                send(
+                    ESDataDownloadProgress(
+                        1.0f,
+                        context.getString(R.string.progress_complete),
+                        true,
+                        geodatabase = geodatabase
+                    )
+                )
+            }.onFailure { error ->
+                Logger.e(TAG, "Download failed for ${featureServiceConfig.name}", error)
+                send(
+                    ESDataDownloadProgress(
+                        0.0f,
+                        context.getString(R.string.multi_service_failed, featureServiceConfig.name),
+                        true,
+                        error.message
+                    )
+                )
+            }
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Unexpected error downloading ${featureServiceConfig.name}", e)
+            send(
+                ESDataDownloadProgress(
+                    0.0f,
+                    context.getString(R.string.multi_service_failed, featureServiceConfig.name),
+                    true,
+                    e.message
+                )
+            )
+        }
+    }
+
+    /**
+     * Downloads geodatabases from multiple feature services in parallel.
+     *
+     * This method coordinates simultaneous downloads and aggregates progress.
+     * Implements fail-fast strategy: if any service fails, all downloads are aborted.
+     *
+     * @param extent The geographic extent to download data for
+     * @param featureServices List of feature service configurations
+     * @return Flow emitting combined progress updates
+     */
+    override suspend fun downloadMultipleServices(
+        extent: Envelope,
+        featureServices: List<FeatureServiceConfig>
+    ): Flow<MultiServiceDownloadProgress> = channelFlow {
+        Logger.i(TAG, "Starting multi-service download: ${featureServices.size} services")
+
+        val serviceProgresses = mutableMapOf<String, ESDataDownloadProgress>()
+
+        // Initialize progress for all services
+        featureServices.forEach { service ->
+            serviceProgresses[service.id] = ESDataDownloadProgress(
+                progress = 0f,
+                message = context.getString(R.string.multi_service_starting, service.name),
+                isComplete = false
+            )
+        }
+
+        // Send initial progress
+        send(
+            MultiServiceDownloadProgress(
+                serviceProgresses = serviceProgresses.toMap(),
+                overallProgress = 0f,
+                overallMessage = context.getString(
+                    R.string.multi_service_downloading,
+                    featureServices.size
+                ),
+                isComplete = false
+            )
+        )
+
+        try {
+            // Launch parallel downloads
+            coroutineScope {
+                val downloadJobs = featureServices.map { service ->
+                    async {
+                        var lastProgress: ESDataDownloadProgress? = null
+                        var shouldAbort = false
+                        try {
+                            downloadServiceData(extent, service).collect { progress ->
+                                lastProgress = progress
+                                serviceProgresses[service.id] = progress
+
+                                // Calculate overall progress
+                                val overallProgress = serviceProgresses.values
+                                    .map { it.progress }
+                                    .average()
+                                    .toFloat()
+
+                                val completedCount =
+                                    serviceProgresses.values.count { it.isComplete && it.error == null }
+
+                                // Check for errors (fail-fast)
+                                val firstError =
+                                    serviceProgresses.values.firstOrNull { it.error != null }
+                                if (firstError != null && !shouldAbort) {
+                                    shouldAbort = true
+                                    Logger.w(
+                                        TAG,
+                                        "Service ${service.name} failed, aborting all downloads"
+                                    )
+                                    send(
+                                        MultiServiceDownloadProgress(
+                                            serviceProgresses = serviceProgresses.toMap(),
+                                            overallProgress = overallProgress,
+                                            overallMessage = context.getString(
+                                                R.string.multi_service_failed,
+                                                service.name
+                                            ),
+                                            isComplete = false,
+                                            error = firstError.error
+                                        )
+                                    )
+                                    // Don't continue collecting if error detected
+                                    return@collect
+                                }
+
+                                // Send progress update
+                                send(
+                                    MultiServiceDownloadProgress(
+                                        serviceProgresses = serviceProgresses.toMap(),
+                                        overallProgress = overallProgress,
+                                        overallMessage = context.getString(
+                                            R.string.multi_service_progress,
+                                            completedCount,
+                                            featureServices.size
+                                        ),
+                                        isComplete = completedCount == featureServices.size
+                                    )
+                                )
+                            }
+                        } catch (e: Exception) {
+                            Logger.e(TAG, "Error in download job for ${service.name}", e)
+                            serviceProgresses[service.id] = ESDataDownloadProgress(
+                                progress = 0f,
+                                message = context.getString(
+                                    R.string.multi_service_failed,
+                                    service.name
+                                ),
+                                isComplete = false,
+                                error = e.message
+                            )
+                        }
+                    }
+                }
+
+                // Wait for all downloads to complete
+                downloadJobs.awaitAll()
+            }
+
+            // Send final status
+            val allSuccess = serviceProgresses.values.all { it.isComplete && it.error == null }
+            val anyError = serviceProgresses.values.any { it.error != null }
+
+            if (allSuccess) {
+                Logger.i(TAG, "All services downloaded successfully")
+                send(
+                    MultiServiceDownloadProgress(
+                        serviceProgresses = serviceProgresses.toMap(),
+                        overallProgress = 1.0f,
+                        overallMessage = context.getString(R.string.multi_service_complete),
+                        isComplete = true
+                    )
+                )
+            } else if (anyError) {
+                val firstError = serviceProgresses.values.first { it.error != null }
+                Logger.e(TAG, "Multi-service download failed: ${firstError.error}")
+                send(
+                    MultiServiceDownloadProgress(
+                        serviceProgresses = serviceProgresses.toMap(),
+                        overallProgress = serviceProgresses.values.map { it.progress }.average()
+                            .toFloat(),
+                        overallMessage = context.getString(
+                            R.string.multi_service_failed,
+                            "services"
+                        ),
+                        isComplete = false,
+                        error = firstError.error
+                    )
+                )
+            }
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Unexpected error in multi-service download", e)
+            send(
+                MultiServiceDownloadProgress(
+                    serviceProgresses = serviceProgresses.toMap(),
+                    overallProgress = 0f,
+                    overallMessage = context.getString(R.string.error_download_failed_message),
+                    isComplete = false,
+                    error = e.message
+                )
+            )
+        }
+    }
+
+    /**
+     * Synchronizes a specific geodatabase with its feature service.
+     *
+     * @param serviceId Identifier of the service to sync
+     * @return Result indicating success or failure
+     */
+    override suspend fun syncServiceGeodatabase(serviceId: String): Result<Boolean> {
+        return try {
+            Logger.d(TAG, "Starting sync for service: $serviceId")
+
+            val servicePath = getGeodatabasePath(serviceId)
+            val geodatabaseFile = File(servicePath)
+
+            if (!geodatabaseFile.exists()) {
+                Logger.w(TAG, "No geodatabase file found for service: $serviceId")
+                return Result.failure(Exception("No geodatabase available for $serviceId"))
+            }
+
+            // Get service configuration
+            val environment = configuration.getCurrentEnvironment()
+            val serviceConfig = environment.featureServices.find { it.id == serviceId }
+                ?: return Result.failure(Exception("Service configuration not found for $serviceId"))
+
+            // Load the geodatabase
+            val geodatabase = Geodatabase(servicePath)
+            geodatabase.load().onFailure { error ->
+                Logger.e(TAG, "Failed to load geodatabase for $serviceId", error)
+                return Result.failure(error)
+            }
+
+            // Create sync task
+            val geodatabaseSyncTask = GeodatabaseSyncTask(serviceConfig.url)
+            geodatabaseSyncTask.load().onFailure { error ->
+                Logger.e(TAG, "Failed to load sync task for $serviceId", error)
+                return Result.failure(error)
+            }
+
+            // Create sync parameters
+            val syncParams = SyncGeodatabaseParameters().apply {
+                geodatabaseSyncDirection = SyncDirection.Bidirectional
+                shouldRollbackOnFailure = false
+                layerOptions.addAll(
+                    geodatabase.featureTables.map { featureTable ->
+                        SyncLayerOption(featureTable.serviceLayerId)
+                    }
+                )
+            }
+
+            // Create and start sync job
+            val syncJob = geodatabaseSyncTask.createSyncGeodatabaseJob(syncParams, geodatabase)
+            syncJob.start()
+
+            // Wait for result
+            val result = syncJob.result()
+            result.onSuccess {
+                Logger.i(TAG, "Geodatabase synchronized successfully for $serviceId")
+            }.onFailure { error ->
+                Logger.e(TAG, "Geodatabase sync failed for $serviceId", error)
+                geodatabase.close()
+                return Result.failure(error)
+            }
+
+            // Close geodatabase
+            geodatabase.close()
+
+            Result.success(true)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error synchronizing geodatabase for $serviceId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Synchronizes all geodatabases with their respective feature services.
+     *
+     * Syncs sequentially to avoid conflicts and provides individual results per service.
+     *
+     * @return Result containing map of service ID to sync success status
+     */
+    override suspend fun syncAllGeodatabases(): Result<Map<String, Boolean>> {
+        return try {
+            Logger.i(TAG, "Starting sync for all geodatabases")
+
+            val environment = configuration.getCurrentEnvironment()
+            val results = mutableMapOf<String, Boolean>()
+
+            environment.featureServices.forEach { service ->
+                Logger.d(TAG, "Syncing service: ${service.name}")
+
+                val syncResult = syncServiceGeodatabase(service.id)
+                results[service.id] = syncResult.isSuccess
+
+                if (syncResult.isFailure) {
+                    Logger.w(TAG, "Sync failed for ${service.name}, continuing with others...")
+                }
+            }
+
+            val successCount = results.values.count { it }
+            Logger.i(TAG, "Sync completed: $successCount/${results.size} services successful")
+
+            Result.success(results)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error syncing all geodatabases", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Loads all existing geodatabases from local storage.
+     *
+     * Scans for geodatabase files matching configured services and loads metadata.
+     *
+     * @return Result containing list of loaded geodatabase information
+     */
+    override suspend fun loadExistingGeodatabases(): Result<List<GeodatabaseInfo>> {
+        return try {
+            Logger.i(TAG, "Loading all existing geodatabases")
+
+            val environment = configuration.getCurrentEnvironment()
+            val geodatabaseInfoList = mutableListOf<GeodatabaseInfo>()
+
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+
+                if (!geodatabaseFile.exists()) {
+                    Logger.d(TAG, "No geodatabase found for service: ${service.name}")
+                    continue
+                }
+
+                // Check file size
+                val fileSize = geodatabaseFile.length()
+                if (fileSize == 0L) {
+                    Logger.w(TAG, "Geodatabase file for ${service.name} is empty, skipping")
+                    continue
+                }
+
+                Logger.d(
+                    TAG,
+                    "Loading geodatabase for ${service.name}: size = ${fileSize / 1024} KB"
+                )
+
+                // Load the geodatabase
+                val geodatabase = Geodatabase(servicePath)
+                val loadResult = geodatabase.load()
+                if (loadResult.isFailure) {
+                    Logger.e(
+                        TAG,
+                        "Failed to load geodatabase for ${service.name}",
+                        loadResult.exceptionOrNull()
+                    )
+                    continue
+                }
+
+                // Validate has feature tables
+                if (geodatabase.featureTables.isEmpty()) {
+                    Logger.w(TAG, "Geodatabase for ${service.name} contains no feature tables")
+                    geodatabase.close()
+                    continue
+                }
+
+                // Use file modified time as last sync time
+                val lastSyncTime = geodatabaseFile.lastModified()
+
+                // Create geodatabase info
+                val geodatabaseInfo = GeodatabaseInfo(
+                    serviceId = service.id,
+                    serviceName = service.name,
+                    fileName = "${service.id}.geodatabase",
+                    geodatabase = geodatabase,
+                    lastSyncTime = lastSyncTime,
+                    layerCount = geodatabase.featureTables.size,
+                    fileSizeKB = fileSize / 1024,
+                    displayOnMap = service.displayOnMap
+                )
+
+                geodatabaseInfoList.add(geodatabaseInfo)
+                Logger.i(
+                    TAG,
+                    "Loaded geodatabase for ${service.name}: ${geodatabaseInfo.layerCount} layers"
+                )
+            }
+
+            Logger.i(TAG, "Successfully loaded ${geodatabaseInfoList.size} geodatabases")
+            Result.success(geodatabaseInfoList)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error loading existing geodatabases", e)
             Result.failure(e)
         }
     }

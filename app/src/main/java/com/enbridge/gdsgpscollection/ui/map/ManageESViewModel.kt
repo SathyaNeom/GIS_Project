@@ -3,13 +3,17 @@ package com.enbridge.gdsgpscollection.ui.map
 /**
  * @author Sathya Narayanan
  * Refactored to use ManageESFacade - Phase 4: ViewModel Dependency Reduction
+ * Enhanced for Multi-Service Support - Phase 5: Presentation Layer
  */
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.arcgismaps.geometry.Envelope
+import com.enbridge.gdsgpscollection.domain.config.FeatureServiceConfiguration
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
+import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
+import com.enbridge.gdsgpscollection.domain.entity.MultiServiceDownloadProgress
 import com.enbridge.gdsgpscollection.domain.facade.ManageESFacade
 import com.enbridge.gdsgpscollection.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,15 +26,25 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for Manage ES Edits feature
- * Manages state for downloading, posting, and managing ES data
+ * ViewModel for Manage ES Edits feature.
  *
- * Refactored to use [ManageESFacade] instead of 6 individual use cases,
- * reducing dependencies from 6 → 1 (83% reduction)
+ * Manages state for downloading, posting, and managing ES data.
+ * Supports both single-service (Wildfire) and multi-service (Project) environments.
+ *
+ * Architecture Evolution:
+ * - Phase 4: Refactored to use ManageESFacade (6 use cases → 1 facade, 83% reduction)
+ * - Phase 5: Enhanced for multi-service geodatabase support
+ *
+ * @property manageESFacade Facade providing access to all ES data operations
+ * @property configuration Environment configuration provider
+ *
+ * @author Sathya Narayanan
+ * @since 1.0.0
  */
 @HiltViewModel
 class ManageESViewModel @Inject constructor(
-    private val manageESFacade: ManageESFacade
+    private val manageESFacade: ManageESFacade,
+    private val configuration: FeatureServiceConfiguration
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ManageESUiState())
@@ -68,15 +82,138 @@ class ManageESViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Handles "Get Data" button click - automatically selects single or multi-service download
+     * based on current environment configuration.
+     *
+     * Environment Routing:
+     * - Project Environment: Calls onGetDataMultiService() for parallel downloads
+     * - Wildfire Environment: Calls onGetDataSingleService() for legacy download
+     *
+     * @param extent Geographic extent to download data for
+     * @param onGeodatabasesDownloaded Callback with list of downloaded geodatabases
+     * @param onSaveTimestamp Callback to save download timestamp
+     */
     fun onGetDataClicked(
         extent: Envelope,
-        onGeodatabaseDownloaded: (com.arcgismaps.data.Geodatabase) -> Unit = {},
+        onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit = {},
         onSaveTimestamp: () -> Unit = {}
     ) {
+        val environment = configuration.getCurrentEnvironment()
+        val isMultiService = environment.featureServices.size > 1
+
         Logger.i(
             TAG,
-            "Get Data clicked - Extent: ${extent.xMin}, ${extent.yMin}, ${extent.xMax}, ${extent.yMax}"
+            "Get Data clicked - Environment: ${if (isMultiService) "Multi-Service" else "Single-Service"}"
         )
+
+        if (isMultiService) {
+            onGetDataMultiService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
+        } else {
+            onGetDataSingleService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
+        }
+    }
+
+    /**
+     * Multi-service download for Project environment.
+     *
+     * Downloads Operations and Basemap geodatabases in parallel with combined progress tracking.
+     */
+    private fun onGetDataMultiService(
+        extent: Envelope,
+        onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit,
+        onSaveTimestamp: () -> Unit
+    ) {
+        Logger.i(TAG, "Starting multi-service download")
+
+        viewModelScope.launch {
+            if (_uiState.value.isDownloadInProgress) {
+                Logger.w(TAG, "Download is already in progress, ignoring request")
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDownloadInProgress = true,
+                    isMultiServiceDownload = true,
+                    downloadError = null
+                )
+            }
+
+            try {
+                manageESFacade.downloadAllServices(extent).collect { progress ->
+                    Logger.d(
+                        TAG,
+                        "Multi-service progress: ${(progress.overallProgress * 100).toInt()}% - ${progress.overallMessage}"
+                    )
+
+                    // Check for errors
+                    if (progress.hasError) {
+                        Logger.e(TAG, "Multi-service download failed: ${progress.error}")
+                        _uiState.update {
+                            it.copy(
+                                isDownloadInProgress = false,
+                                isMultiServiceDownload = false,
+                                multiServiceProgress = null,
+                                downloadError = progress.error
+                            )
+                        }
+                        return@collect
+                    }
+
+                    _uiState.update {
+                        it.copy(multiServiceProgress = progress)
+                    }
+
+                    if (progress.isComplete && !progress.hasError) {
+                        Logger.i(TAG, "Multi-service download completed successfully")
+
+                        // Load all geodatabases and pass to callback
+                        val result = manageESFacade.loadAllGeodatabases()
+                        result.onSuccess { geodatabaseInfos ->
+                            Logger.d(TAG, "Loaded ${geodatabaseInfos.size} geodatabases")
+                            onGeodatabasesDownloaded(geodatabaseInfos)
+                            onSaveTimestamp()
+                        }.onFailure { error ->
+                            Logger.e(TAG, "Failed to load geodatabases after download", error)
+                        }
+
+                        // Reload changed data
+                        loadChangedData()
+
+                        _uiState.update {
+                            it.copy(
+                                isDownloadInProgress = false,
+                                isMultiServiceDownload = false
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Logger.e(TAG, "Error in multi-service download", e)
+                _uiState.update {
+                    it.copy(
+                        isDownloadInProgress = false,
+                        isMultiServiceDownload = false,
+                        multiServiceProgress = null,
+                        downloadError = e.message ?: "Unknown error occurred"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Single-service download for Wildfire environment (legacy).
+     *
+     * TODO: This method will be deprecated once all environments use multi-service approach.
+     */
+    private fun onGetDataSingleService(
+        extent: Envelope,
+        onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit,
+        onSaveTimestamp: () -> Unit
+    ) {
+        Logger.i(TAG, "Starting single-service download (legacy)")
 
         viewModelScope.launch {
             if (_uiState.value.isDownloadInProgress) {
@@ -91,7 +228,6 @@ class ManageESViewModel @Inject constructor(
                     downloadError = null
                 )
             }
-            Logger.d(TAG, "Starting ES data download...")
 
             try {
                 manageESFacade.downloadESData(extent).collect { progress ->
@@ -126,11 +262,23 @@ class ManageESViewModel @Inject constructor(
                     if (progress.isComplete && progress.error == null) {
                         Logger.i(TAG, "Download completed successfully")
 
-                        // Pass the geodatabase to the callback if available
+                        // Load geodatabase and pass to callback
                         progress.geodatabase?.let { geodatabase ->
                             Logger.d(TAG, "Notifying geodatabase downloaded")
-                            onGeodatabaseDownloaded(geodatabase)
-                            // Save timestamp after successful download
+
+                            // Wrap single geodatabase in list for consistent callback
+                            val geodatabaseInfo = GeodatabaseInfo(
+                                serviceId = "wildfire",
+                                serviceName = "Wildfire",
+                                fileName = "wildfire.geodatabase",
+                                geodatabase = geodatabase,
+                                lastSyncTime = System.currentTimeMillis(),
+                                layerCount = geodatabase.featureTables.size,
+                                fileSizeKB = 0, // Will be calculated by repository
+                                displayOnMap = true
+                            )
+
+                            onGeodatabasesDownloaded(listOf(geodatabaseInfo))
                             onSaveTimestamp()
                         }
 
@@ -261,7 +409,8 @@ class ManageESViewModel @Inject constructor(
             it.copy(
                 isDownloading = false,
                 downloadProgress = 0f,
-                downloadMessage = ""
+                downloadMessage = "",
+                multiServiceProgress = null
             )
         }
     }
@@ -293,23 +442,39 @@ class ManageESViewModel @Inject constructor(
 }
 
 /**
- * UI State for Manage ES screen
+ * UI State for Manage ES screen.
+ *
+ * Enhanced for multi-service support with separate fields for single and multi-service downloads.
  */
 data class ManageESUiState(
     val selectedDistance: ESDataDistance = ESDataDistance.TWO_KILOMETERS,
+
+    // Single-service download state (legacy/Wildfire)
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
     val downloadMessage: String = "",
+
+    // Multi-service download state (Project environment)
+    val isMultiServiceDownload: Boolean = false,
+    val multiServiceProgress: MultiServiceDownloadProgress? = null,
+
+    // Common download state
     val downloadError: String? = null,
+    val isDownloadInProgress: Boolean = false, // Prevents concurrent downloads
+
+    // Upload/Post state
     val isUploading: Boolean = false,
     val uploadProgress: Float = 0f,
     val isPosting: Boolean = false,
     val postSuccess: Boolean = false,
     val postError: String? = null,
+
+    // Changed data state
     val changedData: List<JobCard> = emptyList(),
+
+    // Delete job cards state
     val isDeletingJobCards: Boolean = false,
     val deletedJobCardsCount: Int = 0,
     val showDeleteDialog: Boolean = false,
-    val deleteError: String? = null,
-    val isDownloadInProgress: Boolean = false // Prevents concurrent downloads
+    val deleteError: String? = null
 )

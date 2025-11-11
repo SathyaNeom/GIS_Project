@@ -580,4 +580,26 @@
     <string name="msg_data_loaded_successfully">Map data loaded successfully</string>
     <string name="msg_data_downloaded_successfully">Data downloaded successfully</string>
 
+    <!-- Multi-Geodatabase Support -->
+    <string name="multi_service_downloading">Downloading %1$d services…</string>
+    <string name="multi_service_progress">Downloading %1$d of %2$d services…</string>
+    <string name="multi_service_complete">All services downloaded successfully</string>
+    <string name="multi_service_failed">Failed to download service: %1$s</string>
+    <string name="multi_service_starting">Starting download for %1$s…</string>
+    <string name="multi_service_syncing">Synchronizing %1$d services…</string>
+    <string name="multi_service_sync_complete">All services synchronized successfully</string>
+    <string name="multi_service_sync_failed">Failed to synchronize %1$s</string>
+
+    <!-- Service Environment -->
+    <string name="env_project">Project Environment</string>
+    <string name="env_wildfire">Wildfire Environment</string>
+    <string name="env_operations">Operations</string>
+    <string name="env_basemap">Basemap</string>
+
+    <!-- Layer Display Status -->
+    <string name="layer_not_on_map">Not displayed on map</string>
+    <string name="layer_on_map">Displayed on map</string>
+    <string name="layer_visibility_toggled">Layer %1$s visibility changed to %2$s</string>
+    <string name="layer_not_on_map_toggle_ignored">Layer %1$s is not on map, visibility toggle ignored</string>
+
 </resources>
