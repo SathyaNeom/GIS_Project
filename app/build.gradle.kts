@@ -263,6 +263,9 @@ dependencies {
     // Coil - Image Loading
     implementation(libs.coil.compose)
 
+    // Accompanist - Permissions
+    implementation(libs.accompanist.permissions)
+
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

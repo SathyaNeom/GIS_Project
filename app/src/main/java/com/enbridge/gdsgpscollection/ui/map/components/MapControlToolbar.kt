@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.FloatingActionButton
@@ -58,9 +59,16 @@ import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
  *         isTablet = configuration.screenWidthDp >= 600,
  *         isExpanded = isToolbarExpanded,
  *         isFullscreen = isFullscreen,
+ *         isLocationFollowing = isLocationFollowing,
  *         onToggleExpanded = { isToolbarExpanded = !isToolbarExpanded },
  *         onZoomIn = { /* Handle zoom in */ },
  *         onZoomOut = { /* Handle zoom out */ },
+ *         onToggleFullscreen = { /* Handle toggle fullscreen */ },
+ *         onIdentify = { /* Handle identify */ },
+ *         onShowLayers = { /* Handle show layers */ },
+ *         onClear = { /* Handle clear */ },
+ *         onMyLocation = { /* Handle my location */ },
+ *         onToggleMeasure = { /* Handle toggle measure */ },
  *         modifier = Modifier.align(Alignment.TopEnd)
  *     )
  * }
@@ -75,6 +83,7 @@ import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
  * @param isTablet True if device screen width is >= 600dp (triggers horizontal layout)
  * @param isExpanded True when toolbar is expanded showing all control buttons
  * @param isFullscreen True when map is in fullscreen mode (changes fullscreen icon)
+ * @param isLocationFollowing True when actively following user's location
  * @param onToggleExpanded Callback invoked when main FAB is clicked to toggle expansion
  * @param onZoomIn Callback invoked when zoom in button is clicked
  * @param onZoomOut Callback invoked when zoom out button is clicked
@@ -91,6 +100,7 @@ fun MapControlToolbar(
     isTablet: Boolean,
     isExpanded: Boolean,
     isFullscreen: Boolean,
+    isLocationFollowing: Boolean,
     onToggleExpanded: () -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
@@ -162,8 +172,8 @@ fun MapControlToolbar(
                     )
 
                     MapControlButton(
-                        icon = Icons.Default.MyLocation,
-                        contentDescription = "My Location",
+                        icon = if (isLocationFollowing) Icons.Filled.MyLocation else Icons.Outlined.MyLocation,
+                        contentDescription = if (isLocationFollowing) "Stop Following Location" else "Follow My Location",
                         onClick = onMyLocation
                     )
 
@@ -247,8 +257,8 @@ fun MapControlToolbar(
                     )
 
                     MapControlButton(
-                        icon = Icons.Default.MyLocation,
-                        contentDescription = "My Location",
+                        icon = if (isLocationFollowing) Icons.Filled.MyLocation else Icons.Outlined.MyLocation,
+                        contentDescription = if (isLocationFollowing) "Stop Following Location" else "Follow My Location",
                         onClick = onMyLocation
                     )
 

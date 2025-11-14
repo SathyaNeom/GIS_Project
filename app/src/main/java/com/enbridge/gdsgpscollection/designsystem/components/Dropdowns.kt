@@ -48,6 +48,7 @@ fun <T> SingleSelectDropdown(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    placeholder: String? = null,
     itemLabel: (T) -> String = { it.toString() }
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -62,6 +63,9 @@ fun <T> SingleSelectDropdown(
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
+            placeholder = if (placeholder != null && selectedItem == null) {
+                { Text(placeholder) }
+            } else null,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -237,7 +241,8 @@ private fun SingleSelectDropdownPreview() {
                 items = options,
                 selectedItem = selectedItem,
                 onItemSelected = { selectedItem = it },
-                label = "Choose One"
+                label = "Choose One",
+                placeholder = "Select an option"
             )
         }
     }

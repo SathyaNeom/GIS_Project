@@ -8,6 +8,8 @@ import com.enbridge.gdsgpscollection.ui.map.delegates.GeodatabaseManagerDelegate
 import com.enbridge.gdsgpscollection.ui.map.delegates.GeodatabaseManagerDelegateImpl
 import com.enbridge.gdsgpscollection.ui.map.delegates.LayerManagerDelegate
 import com.enbridge.gdsgpscollection.ui.map.delegates.LayerManagerDelegateImpl
+import com.enbridge.gdsgpscollection.ui.map.delegates.LocationManagerDelegate
+import com.enbridge.gdsgpscollection.ui.map.delegates.LocationManagerDelegateImpl
 import com.enbridge.gdsgpscollection.ui.map.delegates.NetworkConnectivityDelegate
 import com.enbridge.gdsgpscollection.ui.map.delegates.NetworkConnectivityDelegateImpl
 import dagger.Binds
@@ -62,6 +64,12 @@ abstract class DelegateModule {
     abstract fun bindNetworkConnectivityDelegate(
         impl: NetworkConnectivityDelegateImpl
     ): NetworkConnectivityDelegate
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationManagerDelegate(
+        impl: LocationManagerDelegateImpl
+    ): LocationManagerDelegate
 
     companion object {
         /**

@@ -59,12 +59,14 @@ data class DialogState(
  * @property showManageES True when Manage ES Edits bottom sheet is visible
  * @property showProjectSettings True when Project Settings bottom sheet is visible
  * @property showTableOfContents True when Table of Contents bottom sheet is visible
+ * @property manageESCapturedViewpoint Viewpoint captured at the moment ManageES sheet is opened (for restoration)
  */
 data class BottomSheetState(
     val showCollectES: Boolean = false,
     val showManageES: Boolean = false,
     val showProjectSettings: Boolean = false,
-    val showTableOfContents: Boolean = false
+    val showTableOfContents: Boolean = false,
+    val manageESCapturedViewpoint: Viewpoint? = null
 )
 
 /**
@@ -237,8 +239,9 @@ class MainMapScreenState(
      * Shows the Manage ES Edits bottom sheet.
      * Automatically closes other bottom sheets to maintain single-sheet UX.
      */
-    fun showManageESSheet() {
-        bottomSheetState = BottomSheetState(showManageES = true)
+    fun showManageESSheet(viewpoint: Viewpoint? = null) {
+        bottomSheetState =
+            BottomSheetState(showManageES = true, manageESCapturedViewpoint = viewpoint)
     }
 
     /**

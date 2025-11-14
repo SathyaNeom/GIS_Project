@@ -5,7 +5,7 @@ package com.enbridge.gdsgpscollection.ui.map
  */
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -47,7 +47,8 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
@@ -65,7 +66,8 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
@@ -83,14 +85,15 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
         // Then - Distance dropdown should be present
         composeTestRule
-            .onNodeWithText("Distance")
+            .onNodeWithText("Select distance")
             .assertIsDisplayed()
     }
 
@@ -101,16 +104,17 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // Then
+        // Then - Get Data button should be displayed but disabled (no distance selected)
         composeTestRule
             .onNodeWithText("Get Data")
             .assertIsDisplayed()
-            .assertIsEnabled()
+            .assertIsNotEnabled()
     }
 
     @Test
@@ -120,7 +124,8 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
@@ -142,22 +147,23 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // Then - Delete JC button
+        // Then - Delete JC button should be disabled (no job card selected)
         composeTestRule
             .onNodeWithText("Delete JC")
             .assertIsDisplayed()
-            .assertIsEnabled()
+            .assertIsNotEnabled()
 
-        // And - Post Data button
+        // And - Post Data button should be disabled (no job card selected)
         composeTestRule
             .onNodeWithText("Post Data")
             .assertIsDisplayed()
-            .assertIsEnabled()
+            .assertIsNotEnabled()
     }
 
     @Test
@@ -167,7 +173,8 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
@@ -186,7 +193,8 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = { dismissCalled = true },
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
@@ -201,25 +209,23 @@ class ManageESBottomSheetTest {
     }
 
     @Test
-    fun postDataButton_shouldTriggerSnackbarCallback() {
-        // Given
-        var snackbarCalled = false
+    fun postDataButton_shouldBeDisabledWhenNoJobCardSelected() {
+        // Given - No job card selected
         composeTestRule.setContent {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = { snackbarCalled = true }
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // When
+        // Then - Post Data button should be disabled
         composeTestRule
             .onNodeWithText("Post Data")
-            .performClick()
-
-        // Then
-        assert(snackbarCalled)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
     }
 
     @Test
@@ -229,12 +235,13 @@ class ManageESBottomSheetTest {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // When
+        // When - Try to click Delete JC (will be disabled, but we test dialog logic)
         composeTestRule
             .onNodeWithText("Delete JC")
             .performClick()
@@ -253,61 +260,41 @@ class ManageESBottomSheetTest {
     }
 
     @Test
-    fun getDataButton_shouldShowProgressDialog() {
-        // Given
+    fun getDataButton_shouldBeDisabledWhenNoDistanceSelected() {
+        // Given - No distance selected initially
         composeTestRule.setContent {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // When
+        // Then - Get Data button should be disabled
         composeTestRule
             .onNodeWithText("Get Data")
-            .performClick()
-
-        // Wait for download to start
-        composeTestRule.waitForIdle()
-
-        // Then - Progress dialog should appear
-        composeTestRule
-            .onNodeWithText("Downloading Data")
             .assertIsDisplayed()
+            .assertIsNotEnabled()
     }
 
     @Test
-    fun distanceDropdown_shouldShowAllOptions() {
+    fun distanceDropdown_shouldShowPlaceholder() {
         // Given
         composeTestRule.setContent {
             GdsGpsCollectionTheme {
                 ManageESBottomSheet(
                     onDismissRequest = {},
-                    onPostDataSnackbar = {}
+                    onPostDataSnackbar = {},
+                    getCurrentMapExtent = { null }
                 )
             }
         }
 
-        // When - Click on distance dropdown
+        // Then - Distance dropdown should show placeholder text
         composeTestRule
-            .onNodeWithText("100 Meters") // Default selected value
-            .performClick()
-
-        composeTestRule.waitForIdle()
-
-        // Then - All distance options should be visible
-        composeTestRule
-            .onNodeWithText("50 Meters")
-            .assertIsDisplayed()
-
-        composeTestRule
-            .onNodeWithText("100 Meters")
-            .assertIsDisplayed()
-
-        composeTestRule
-            .onNodeWithText("500 Meters")
+            .onNodeWithText("Select distance")
             .assertIsDisplayed()
     }
 }

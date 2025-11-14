@@ -22,6 +22,11 @@ package com.enbridge.gdsgpscollection.ui.map.components
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,20 +37,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,15 +68,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppDialog
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
+import com.enbridge.gdsgpscollection.designsystem.components.AppRadioButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppSnackbarHost
 import com.enbridge.gdsgpscollection.designsystem.components.DialogType
 import com.enbridge.gdsgpscollection.designsystem.components.DownloadProgressDialog
@@ -77,6 +93,8 @@ import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.ui.map.ManageESUiState
 import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
+import com.arcgismaps.mapping.Viewpoint
+import com.arcgismaps.geometry.Envelope
 import kotlinx.coroutines.launch
 
 /**
@@ -88,17 +106,50 @@ import kotlinx.coroutines.launch
 fun ManageESBottomSheet(
     onDismissRequest: () -> Unit,
     onPostDataSnackbar: () -> Unit,
-    getCurrentMapExtent: () -> com.arcgismaps.geometry.Envelope?,
+    getCurrentMapExtent: () -> Envelope?,
+    initialViewpoint: Viewpoint?,
+    onRestoreViewpoint: (Viewpoint) -> Unit,
     modifier: Modifier = Modifier,
     onDistanceSelected: (ESDataDistance) -> Unit = {},
     onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     viewModel: ManageESViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var showDownloadErrorDialog by remember { mutableStateOf(false) }
     var showSyncErrorDialog by remember { mutableStateOf(false) }
+    var downloadSuccessTriggered by remember { mutableStateOf(false) }
+    var downloadErrorTriggered by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Collect location state from ViewModel
+    val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
+    val currentLocation by viewModel.currentLocation.collectAsState()
+    val isGetDataEnabled by viewModel.isGetDataEnabled.collectAsState()
+
+    // Store the pre-captured original viewpoint for potential restoration
+    // initialViewpoint is captured synchronously in parent (MainMapScreen) before sheet composition
+    // This eliminates race conditions with map animations updating currentViewpoint
+    LaunchedEffect(Unit) {
+        viewModel.storeOriginalViewpoint(initialViewpoint)
+    }
+
+    // Clear error states when the bottom sheet is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.onBottomSheetDismissed()
+        }
+    }
+
+    // Handle dismissal with viewpoint restoration if not committed
+    val handleDismiss: () -> Unit = {
+        val viewpointToRestore = viewModel.onBottomSheetDismissedWithViewpoint()
+        if (viewpointToRestore != null) {
+            onRestoreViewpoint(viewpointToRestore)
+        }
+        onDismissRequest()
+    }
 
     // Show success snackbar when post data completes
     LaunchedEffect(uiState.postSuccess) {
@@ -111,7 +162,68 @@ fun ManageESBottomSheet(
         }
     }
 
-    // Error detection
+    // Handle download success - dismiss bottom sheet and show success snackbar
+    LaunchedEffect(
+        uiState.isDownloadInProgress,
+        uiState.downloadError,
+        uiState.multiServiceProgress
+    ) {
+        // Multi-service download completion
+        val progress = uiState.multiServiceProgress
+        if (!uiState.isDownloadInProgress &&
+            uiState.isMultiServiceDownload &&
+            progress != null &&
+            progress.isComplete &&
+            !progress.hasError &&
+            !downloadSuccessTriggered
+        ) {
+            downloadSuccessTriggered = true
+            // CRITICAL: Use handleDismiss to properly handle extent commit on success
+            // Download success means extent was committed via "Get Data"
+            handleDismiss()
+            // Then show success snackbar from parent
+            onPostDataSnackbar()
+        }
+        // Single-service download completion
+        else if (!uiState.isDownloadInProgress &&
+            !uiState.isDownloading &&
+            !uiState.isMultiServiceDownload &&
+            uiState.downloadError == null &&
+            !downloadSuccessTriggered &&
+            uiState.downloadProgress > 0f
+        ) {
+            downloadSuccessTriggered = true
+            // CRITICAL: Use handleDismiss to properly handle extent commit on success
+            // Download success means extent was committed via "Get Data"
+            handleDismiss()
+            // Then show success snackbar from parent
+            onPostDataSnackbar()
+        }
+    }
+
+    // Handle download error - show error snackbar without dismissing
+    LaunchedEffect(uiState.downloadError) {
+        if (uiState.downloadError != null && !downloadErrorTriggered) {
+            downloadErrorTriggered = true
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = uiState.downloadError
+                        ?: "Failed to download geodatabase. Please try again.",
+                    duration = SnackbarDuration.Long
+                )
+            }
+        }
+    }
+
+    // Reset triggered flags when download starts
+    LaunchedEffect(uiState.isDownloadInProgress) {
+        if (uiState.isDownloadInProgress) {
+            downloadSuccessTriggered = false
+            downloadErrorTriggered = false
+        }
+    }
+
+    // Error detection for dialogs (kept for backward compatibility)
     LaunchedEffect(uiState.downloadError) {
         if (uiState.downloadError != null) {
             showDownloadErrorDialog = true
@@ -125,7 +237,10 @@ fun ManageESBottomSheet(
 
     ManageESBottomSheetContent(
         uiState = uiState,
-        onDismissRequest = onDismissRequest,
+        isLocationAvailable = isLocationAvailable,
+        currentLocation = currentLocation,
+        isGetDataEnabled = isGetDataEnabled,
+        onDismissRequest = handleDismiss,  // Pass handleDismiss directly
         onDistanceSelected = { distance ->
             viewModel.onDistanceSelected(distance)
             onDistanceSelected(distance)
@@ -144,8 +259,11 @@ fun ManageESBottomSheet(
         onDeleteJobCardsClicked = viewModel::onDeleteJobCardsClicked,
         onDismissDeleteDialog = viewModel::onDismissDeleteDialog,
         onDismissDownloadDialog = viewModel::onDismissDownloadDialog,
+        onJobCardSelected = viewModel::onJobCardSelected,
+        onJobCardDeselected = { viewModel.onJobCardDeselected() },
         snackbarHostState = snackbarHostState,
-        modifier = modifier
+        modifier = modifier,
+        context = context
     )
 
     // Show download progress dialog
@@ -176,7 +294,9 @@ fun ManageESBottomSheet(
             title = "Synchronizing Data"
         )
     }
-    // Download error dialog
+    // Download error dialog (commented out as we're using snackbar now)
+    // Keeping the code for reference in case dialogs are preferred later
+    /*
     if (showDownloadErrorDialog && uiState.downloadError != null) {
         val errorMessage = uiState.downloadError
         AppDialog(
@@ -214,6 +334,7 @@ fun ManageESBottomSheet(
             }
         )
     }
+    */
     if (showSyncErrorDialog && uiState.postError != null) {
         val errorMessage = uiState.postError
         AppDialog(
@@ -251,6 +372,9 @@ fun ManageESBottomSheet(
 @Composable
 private fun ManageESBottomSheetContent(
     uiState: ManageESUiState,
+    isLocationAvailable: Boolean,
+    currentLocation: com.arcgismaps.geometry.Point?,
+    isGetDataEnabled: Boolean,
     onDismissRequest: () -> Unit,
     onDistanceSelected: (ESDataDistance) -> Unit,
     onGetDataClicked: () -> Unit,
@@ -258,8 +382,11 @@ private fun ManageESBottomSheetContent(
     onDeleteJobCardsClicked: () -> Unit,
     onDismissDeleteDialog: () -> Unit,
     onDismissDownloadDialog: () -> Unit,
+    onJobCardSelected: (com.enbridge.gdsgpscollection.domain.entity.JobCard) -> Unit,
+    onJobCardDeselected: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -274,6 +401,7 @@ private fun ManageESBottomSheetContent(
     ModalBottomSheet(
         onDismissRequest = {
             // Only allow dismissal when no async operations are running
+            // CRITICAL: This now calls handleDismiss which includes viewpoint restoration logic
             if (!uiState.isDownloading && !uiState.isUploading) {
                 onDismissRequest()
             }
@@ -313,7 +441,7 @@ private fun ManageESBottomSheetContent(
                 AppIconButton(
                     icon = Icons.Default.Close,
                     contentDescription = "Close",
-                    onClick = onDismissRequest,
+                    onClick = onDismissRequest,  // This now triggers handleDismiss -> viewpoint restoration
                     enabled = !uiState.isDownloading && !uiState.isUploading
                 )
             }
@@ -330,7 +458,8 @@ private fun ManageESBottomSheetContent(
                     items = ESDataDistance.entries,
                     selectedItem = uiState.selectedDistance,
                     onItemSelected = onDistanceSelected,
-                    label = "Distance",
+                    label = stringResource(R.string.managees_distance),
+                    placeholder = stringResource(R.string.managees_distance_placeholder),
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 64.dp),
@@ -339,10 +468,10 @@ private fun ManageESBottomSheetContent(
                 )
 
                 PrimaryButton(
-                    text = "Get Data",
+                    text = stringResource(R.string.managees_get_data),
                     onClick = onGetDataClicked,
                     icon = Icons.Default.Download,
-                    enabled = !uiState.isDownloading && !uiState.isUploading && !uiState.isDownloadInProgress,
+                    enabled = isGetDataEnabled,
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp)
@@ -351,16 +480,27 @@ private fun ManageESBottomSheetContent(
 
             Spacer(modifier = Modifier.height(Spacing.large))
 
+            // Location status indicator (only show when location unavailable)
+            if (!isLocationAvailable) {
+                LocationStatusIndicator(
+                    context = context,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.height(Spacing.small))
+            }
+
             // Data Changed List Section
             Text(
-                text = "Data Changed:",
+                text = stringResource(R.string.managees_data_changed),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(Spacing.small))
 
-            // Empty/Disabled List Box
+            // Changed Data List with Single Selection
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -373,26 +513,48 @@ private fun ManageESBottomSheetContent(
                 )
             ) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     if (uiState.changedData.isEmpty()) {
-                        Text(
-                            text = "No data changes",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
-                    } else {
-                        // Future: Display list of changed data
-                        Column(
-                            modifier = Modifier.padding(Spacing.normal),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.small)
+                        // Empty state
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            uiState.changedData.forEach { jobCard ->
-                                Text(
-                                    text = "${jobCard.id} - ${jobCard.address}",
-                                    style = MaterialTheme.typography.bodySmall
+                            Text(
+                                text = stringResource(R.string.no_data_changes),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        // Single selection radio button list
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(Spacing.small),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall)
+                        ) {
+                            items(
+                                count = uiState.changedData.size,
+                                key = { index -> uiState.changedData[index].id }
+                            ) { index ->
+                                val jobCard = uiState.changedData[index]
+                                val isSelected = uiState.selectedJobCard?.id == jobCard.id
+
+                                AppRadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        // Toggle selection: deselect if already selected, select if not
+                                        if (isSelected) {
+                                            onJobCardDeselected()
+                                        } else {
+                                            onJobCardSelected(jobCard)
+                                        }
+                                    },
+                                    label = "${jobCard.id} - ${jobCard.address}",
+                                    enabled = !uiState.isDownloading && !uiState.isUploading
                                 )
                             }
                         }
@@ -407,21 +569,26 @@ private fun ManageESBottomSheetContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.small)
             ) {
-                // Delete JC Button
+                // Delete JC Button - enabled only when a job card is selected
                 SecondaryButton(
-                    text = "Delete JC",
+                    text = stringResource(R.string.managees_delete_jc),
                     onClick = onDeleteJobCardsClicked,
                     icon = Icons.Default.Delete,
                     modifier = Modifier.weight(1f),
-                    enabled = !uiState.isDeletingJobCards && !uiState.isDownloading && !uiState.isUploading
+                    enabled = uiState.selectedJobCard != null &&
+                            !uiState.isDeletingJobCards &&
+                            !uiState.isDownloading &&
+                            !uiState.isUploading
                 )
 
-                // Post Data Button
+                // Post Data Button - enabled only when a job card is selected
                 PrimaryButton(
-                    text = "Post Data",
+                    text = stringResource(R.string.managees_post_data),
                     onClick = onPostDataClicked,
                     icon = Icons.Default.Upload,
-                    enabled = !uiState.isDownloading,
+                    enabled = uiState.selectedJobCard != null &&
+                            !uiState.isDownloading &&
+                            !uiState.isUploading,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -435,11 +602,14 @@ private fun ManageESBottomSheetContent(
             onDismiss = onDismissDeleteDialog
         )
     }
-    // Snackbar Host for success messages
-    AppSnackbarHost(
-        hostState = snackbarHostState,
-        snackbarType = SnackbarType.SUCCESS
-    )
+    // Snackbar Host for error messages (shown within bottom sheet)
+    // Note: Success messages are shown via parent's snackbar host after dismissal
+    Box(modifier = Modifier.padding(Spacing.normal)) {
+        AppSnackbarHost(
+            hostState = snackbarHostState,
+            snackbarType = if (uiState.downloadError != null) SnackbarType.ERROR else SnackbarType.SUCCESS
+        )
+    }
 }
 
 /**
@@ -475,6 +645,63 @@ private fun DeleteJobCardsDialog(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// LocationStatusIndicator: Local implementation (not in design system)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun LocationStatusIndicator(
+    context: Context,
+    modifier: Modifier = Modifier
+) {
+    // Check for location permission state (assuming ACCESS_FINE_LOCATION for simplicity)
+    val hasLocationPermission = remember(context) {
+        ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(8.dp),
+        tonalElevation = 1.dp,
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOff,
+                contentDescription = "Location unavailable",
+                tint = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "Location unavailable",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                val instruction = if (!hasLocationPermission) {
+                    "Please grant location permission in app settings."
+                } else {
+                    "Check that location is enabled on your device."
+                }
+                Text(
+                    text = instruction,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PREVIEWS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -483,15 +710,12 @@ private fun DeleteJobCardsDialog(
 @Composable
 private fun ManageESBottomSheetPreview() {
     GdsGpsCollectionTheme {
-        ManageESBottomSheetContent(
-            uiState = ManageESUiState(),
+        ManageESBottomSheet(
             onDismissRequest = {},
-            onDistanceSelected = {},
-            onGetDataClicked = {},
-            onPostDataClicked = {},
-            onDeleteJobCardsClicked = {},
-            onDismissDeleteDialog = {},
-            onDismissDownloadDialog = {},
+            onPostDataSnackbar = {},
+            getCurrentMapExtent = { null },
+            initialViewpoint = null,
+            onRestoreViewpoint = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

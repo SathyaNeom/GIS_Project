@@ -120,6 +120,16 @@
     <string name="measurement_mode_active">Measurement Mode Active</string>
     <string name="identify_mode">Identify Mode - Tap a feature</string>
 
+    <!-- Location Following Messages -->
+    <string name="msg_location_permission_required">Location permission is required to show your position</string>
+    <string name="msg_location_following_enabled">Following your location</string>
+    <string name="msg_location_following_disabled">Location following disabled</string>
+    <string name="msg_location_acquiring">Acquiring your location…</string>
+    <string name="msg_location_not_available">Location not available yet</string>
+    <string name="msg_location_animating">Centering on your location…</string>
+    <string name="cd_location_following">Location following active</string>
+    <string name="cd_location_not_following">Location following inactive</string>
+
     <!-- Coordinate Info Bar -->
     <string name="label_accuracy">Accuracy:</string>
     <string name="label_x">X:</string>
@@ -175,6 +185,7 @@
     <string name="managees_title">Get data or Post Data</string>
     <string name="managees_subtitle">Get Data - Select a Distance around where you are standing</string>
     <string name="managees_distance">Distance</string>
+    <string name="managees_distance_placeholder">Select distance</string>
     <string name="managees_get_data">Get Data</string>
     <string name="managees_data_changed">Data Changed:</string>
     <string name="managees_no_changes">No data changes</string>
@@ -195,7 +206,7 @@
     <string name="projectsettings_get_wo_list">Get WO List - Select Workorder Number Around Where You Are Standing</string>
     <string name="projectsettings_work_order_list">Work Order List:</string>
     <string name="projectsettings_search_by_work_order_number">Search by Work Order Number</string>
-    <string name="projectsettings_enter_work_order_number">Enter work order number...</string>
+    <string name="projectsettings_enter_work_order_number">Enter work order number…</string>
     <string name="projectsettings_no_work_orders_found">No work orders found</string>
     <string name="projectsettings_contractor">Contractor</string>
     <string name="projectsettings_enter_contractor_name">Enter contractor name</string>
@@ -219,7 +230,7 @@
     <string name="projectsettings_enter_inspector_tssa">Enter inspector TSSA number</string>
     <string name="projectsettings_comments">Comments</string>
     <string name="projectsettings_enter_comments">Enter comments</string>
-    <string name="projectsettings_saving">Saving...</string>
+    <string name="projectsettings_saving">Saving…</string>
     <string name="projectsettings_pole_type">Pole Type</string>
     <string name="projectsettings_work_order">Work Order</string>
     <string name="projectsettings_get_wo">Get WO</string>
@@ -375,8 +386,8 @@
     <string name="option_no">No</string>
 
     <!-- Dropdown Options - Service Pipe NPS -->
-    <string name="option_service_pipe_nps_half">1/2\"</string>
-    <string name="option_service_pipe_nps_three_quarter">3/4\"</string>
+    <string name="option_service_pipe_nps_half">½\"</string>
+    <string name="option_service_pipe_nps_three_quarter">¾\"</string>
     <string name="option_service_pipe_nps_one">1\"</string>
 
     <!-- Dropdown Options - Service Pipe Material -->
@@ -601,5 +612,22 @@
     <string name="layer_on_map">Displayed on map</string>
     <string name="layer_visibility_toggled">Layer %1$s visibility changed to %2$s</string>
     <string name="layer_not_on_map_toggle_ignored">Layer %1$s is not on map, visibility toggle ignored</string>
+    <string name="no_data_changes">No data changes</string>
 
+    <!-- Location Status Messages -->
+    <string name="managees_location_required">Location required to download data</string>
+    <string name="managees_location_acquiring">Waiting for GPS location…</string>
+    <string name="managees_location_permission_required">Location permission required</string>
+    <string name="managees_grant_permission">Grant Permission</string>
+
+    <!-- Debug Menu -->
+    <string name="debug_settings_title">Debug Settings</string>
+    <string name="debug_location_mode">Location Mode</string>
+    <string name="debug_location_simulated">Simulated (San Francisco)</string>
+    <string name="debug_location_real">Real GPS</string>
+    <string name="debug_current_location">Current Location</string>
+    <string name="debug_location_unavailable">Location unavailable</string>
+    <string name="debug_location_available">Location available</string>
+
+    <!-- Layer Display Status -->
 </resources>

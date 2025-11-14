@@ -70,6 +70,7 @@ import com.enbridge.gdsgpscollection.ui.map.models.AttributeType
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureAttribute
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureType
 import kotlinx.coroutines.launch
+import androidx.core.graphics.toColorInt
 
 /**
  * Mapper to convert domain FeatureType to UI FeatureType
@@ -78,7 +79,7 @@ private fun com.enbridge.gdsgpscollection.domain.entity.FeatureType.toUiModel():
     return FeatureType(
         id = id,
         name = name,
-        legendColor = Color(android.graphics.Color.parseColor(legendColor)),
+        legendColor = Color(legendColor.toColorInt()),
         attributes = attributes.map { it.toUiModel() }
     )
 }

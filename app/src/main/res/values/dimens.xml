@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Animation Durations -->
+    <integer name="animation_duration_location_pan_ms">1500</integer>
+    <integer name="animation_duration_short_ms">300</integer>
+    <integer name="animation_duration_medium_ms">500</integer>
+    <integer name="animation_duration_long_ms">1000</integer>
+
+    <!-- Map Scale Values -->
+    <integer name="map_scale_location_zoom">10000</integer>
+    <integer name="map_scale_default">72000</integer>
+
+    <!-- Location Display -->
+    <dimen name="location_accuracy_circle_size">48dp</dimen>
+    <dimen name="location_indicator_size">24dp</dimen>
+</resources>

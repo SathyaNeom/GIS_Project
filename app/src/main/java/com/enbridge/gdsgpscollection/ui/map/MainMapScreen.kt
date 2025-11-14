@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalNavigationDrawer
@@ -24,26 +26,35 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arcgismaps.geometry.Point
+import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.toolkit.geoviewcompose.MapView
+import com.arcgismaps.toolkit.geoviewcompose.MapViewProxy
+import com.arcgismaps.toolkit.geoviewcompose.rememberLocationDisplay
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
+import com.arcgismaps.location.Location
 import com.enbridge.gdsgpscollection.designsystem.components.AppScaffold
 import com.enbridge.gdsgpscollection.designsystem.components.AppSnackbarHost
 import com.enbridge.gdsgpscollection.designsystem.components.AppTopBar
 import com.enbridge.gdsgpscollection.designsystem.components.ESNavigationDrawerContent
 import com.enbridge.gdsgpscollection.designsystem.components.SnackbarType
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
+import com.enbridge.gdsgpscollection.ui.debug.DebugSettingsScreen
 import com.enbridge.gdsgpscollection.ui.map.components.CollectESBottomSheet
 import com.enbridge.gdsgpscollection.ui.map.components.CoordinateInfoBar
+import com.enbridge.gdsgpscollection.ui.map.components.LocationPermissionHandler
 import com.enbridge.gdsgpscollection.ui.map.components.MainMapDialogs
 import com.enbridge.gdsgpscollection.ui.map.components.ManageESBottomSheet
 import com.enbridge.gdsgpscollection.ui.map.components.MapControlToolbar
@@ -54,6 +65,7 @@ import com.enbridge.gdsgpscollection.ui.map.components.TableOfContentsBottomShee
 import com.enbridge.gdsgpscollection.util.Logger
 import com.enbridge.gdsgpscollection.util.extensions.toEnvelope
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainMapScreen displays the primary map interface for GPS Device Project.
@@ -110,6 +122,12 @@ fun MainMapScreen(
     val projectSettingsViewModel: ProjectSettingsViewModel = hiltViewModel()
     val mainMapViewModel: MainMapViewModel = hiltViewModel()
 
+    // Location Feature Flags accessed from MainMapViewModel
+    val locationFeatureFlags = mainMapViewModel.locationFeatureFlags
+
+    // Debug screen state
+    var showDebugSettings by remember { mutableStateOf(false) }
+
     // Device configuration
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
@@ -123,9 +141,60 @@ fun MainMapScreen(
     val showFirstTimeGuidanceDialog by mainMapViewModel.showFirstTimeGuidance.collectAsStateWithLifecycle()
     val geodatabaseLoadError by mainMapViewModel.geodatabaseLoadError.collectAsStateWithLifecycle()
     val isOffline by mainMapViewModel.isOffline.collectAsStateWithLifecycle()
+    val currentAutoPanMode by mainMapViewModel.currentAutoPanMode.collectAsStateWithLifecycle()
+    val targetViewpoint by mainMapViewModel.targetViewpoint.collectAsStateWithLifecycle()
 
     // Determine feature visibility
     val showJobCardEntry = appVariant == "electronic"
+
+    // Location display setup
+    val customDataSource = mainMapViewModel.createLocationDataSource()
+    val locationDisplay = rememberLocationDisplay {
+        customDataSource?.let { dataSource = it }
+    }
+
+    // MapViewProxy for programmatic map control (e.g., setting viewpoint)
+    val mapViewProxy = remember { com.arcgismaps.toolkit.geoviewcompose.MapViewProxy() }
+
+    // Location permission state
+    var hasLocationPermission by remember { mutableStateOf(false) }
+
+    // Get resources for animation duration and scale
+    val context = LocalContext.current
+    val animationDurationMs = context.resources.getInteger(
+        com.enbridge.gdsgpscollection.R.integer.animation_duration_location_pan_ms
+    )
+    val locationZoomScale = context.resources.getInteger(
+        com.enbridge.gdsgpscollection.R.integer.map_scale_location_zoom
+    ).toDouble()
+
+    // Handle location permissions
+    LocationPermissionHandler(
+        onPermissionResult = { granted ->
+            hasLocationPermission = granted
+            if (granted) {
+                mainMapViewModel.enableLocationDisplay()
+
+                scope.launch {
+                    locationDisplay.dataSource.start().onSuccess {
+                        Logger.i("MainMapScreen", "Location data source started successfully")
+                        locationDisplay.setAutoPanMode(
+                            com.arcgismaps.location.LocationDisplayAutoPanMode.Off
+                        )
+                        mainMapViewModel.setAutoPanMode(
+                            com.arcgismaps.location.LocationDisplayAutoPanMode.Off
+                        )
+                    }.onFailure { error ->
+                        Logger.e("MainMapScreen", "Failed to start location data source", error)
+                    }
+                }
+            } else {
+                mainMapViewModel.disableLocationDisplay()
+                Logger.w("MainMapScreen", "Location permission denied")
+            }
+        },
+        shouldRequest = true
+    )
 
     // Handle back press - show logout dialog when drawer is closed
     BackHandler(enabled = true) {
@@ -149,6 +218,34 @@ fun MainMapScreen(
         }
     }
 
+    // Handle target viewpoint changes for distance-based zoom with smooth animation
+    LaunchedEffect(targetViewpoint) {
+        targetViewpoint?.let { viewpoint ->
+            Logger.d(
+                "MainMapScreen",
+                "Animating to target viewpoint with duration: ${animationDurationMs}ms"
+            )
+            // Animate the map to the new viewpoint with smooth transition
+            // Duration must be provided in Duration type (using .milliseconds extension)
+            mapViewProxy.setViewpointAnimated(
+                viewpoint = viewpoint,
+                duration = animationDurationMs.milliseconds
+            ).onSuccess {
+                Logger.d("MainMapScreen", "Viewpoint animation completed successfully")
+            }.onFailure { error ->
+                Logger.e("MainMapScreen", "Viewpoint animation failed", error)
+            }
+        }
+    }
+
+    // Observe location updates and update current location in ViewModel
+    val currentLocationValue = locationDisplay.location.collectAsStateWithLifecycle().value
+    LaunchedEffect(currentLocationValue) {
+        // Extract Point from Location and update ViewModel
+        val locationPoint = currentLocationValue?.position
+        mainMapViewModel.updateCurrentLocation(locationPoint)
+    }
+
     GdsGpsCollectionTheme {
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -163,7 +260,7 @@ fun MainMapScreen(
                         screenState.showProjectSettingsSheet()
                     },
                     onManageESEditsClick = {
-                        screenState.showManageESSheet()
+                        screenState.showManageESSheet(screenState.coordinateState.currentViewpoint)
                     },
                     drawerState = drawerState,
                     scope = scope,
@@ -174,9 +271,12 @@ fun MainMapScreen(
             AppScaffold(
                 modifier = modifier,
                 snackbarHost = {
+                    // Note: SnackbarType is set to SUCCESS as default
+                    // Individual snackbar calls can use AppSnackbarHost with specific types
+                    // For download success/error, ManageESBottomSheet uses its own AppSnackbarHost
                     AppSnackbarHost(
                         hostState = snackbarHostState,
-                        snackbarType = SnackbarType.INFO
+                        snackbarType = SnackbarType.SUCCESS // Default to success for most operations
                     )
                 },
                 topBar = {
@@ -189,7 +289,17 @@ fun MainMapScreen(
                                 onClick = { scope.launch { drawerState.open() } }
                             )
                         },
-                        onActionClick = onSearchClick
+                        onActionClick = onSearchClick,
+                        actions = {
+                            // Debug icon (only visible in debug builds)
+                            if (locationFeatureFlags.showDebugMenu) {
+                                AppIconButton(
+                                    icon = Icons.Default.Build,
+                                    contentDescription = "Debug Settings",
+                                    onClick = { showDebugSettings = true }
+                                )
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -205,8 +315,9 @@ fun MainMapScreen(
                     MapView(
                         arcGISMap = map,
                         modifier = Modifier.fillMaxSize(),
+                        locationDisplay = locationDisplay,
+                        mapViewProxy = mapViewProxy,
                         onViewpointChangedForCenterAndScale = { viewpoint ->
-                            // Update coordinate state
                             viewpoint?.let { vp ->
                                 val point = vp.targetGeometry as? Point
                                 val x = point?.let { String.format("%.4f", it.x) } ?: "--"
@@ -267,6 +378,8 @@ fun MainMapScreen(
                         isTablet = isTablet,
                         isExpanded = screenState.interactionState.isToolbarExpanded,
                         isFullscreen = screenState.interactionState.isFullscreen,
+                        isLocationFollowing = currentAutoPanMode is com.arcgismaps.location.LocationDisplayAutoPanMode.CompassNavigation ||
+                                currentAutoPanMode is com.arcgismaps.location.LocationDisplayAutoPanMode.Navigation,
                         onToggleExpanded = {
                             screenState.setToolbarExpanded(!screenState.interactionState.isToolbarExpanded)
                         },
@@ -306,7 +419,60 @@ fun MainMapScreen(
                         },
                         onMyLocation = {
                             scope.launch {
-                                snackbarHostState.showSnackbar("Location feature not yet implemented")
+                                // Check if location permission is granted
+                                if (!hasLocationPermission) {
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(com.enbridge.gdsgpscollection.R.string.msg_location_permission_required)
+                                    )
+                                    return@launch
+                                }
+
+                                // Get current location from location display
+                                val currentLocation = locationDisplay.location.value
+
+                                if (currentLocation == null) {
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(com.enbridge.gdsgpscollection.R.string.msg_location_acquiring)
+                                    )
+                                    // Display quick info message about waiting for fix
+                                    screenState.updateCoordinates(
+                                        x = "--",
+                                        y = "--",
+                                        scale = screenState.coordinateState.scale,
+                                        scaleValue = screenState.coordinateState.scaleValue
+                                    )
+                                    return@launch
+                                }
+
+                                // Toggle location following mode
+                                val newMode = mainMapViewModel.toggleLocationFollowing()
+
+                                // Update the location display auto-pan mode
+                                locationDisplay.setAutoPanMode(newMode)
+
+                                // Animate to current location with ease curve
+                                val viewpoint = Viewpoint(
+                                    center = currentLocation.position,
+                                    scale = locationZoomScale
+                                )
+                                mapViewProxy.setViewpointAnimated(
+                                    viewpoint = viewpoint,
+                                    duration = animationDurationMs.milliseconds
+                                )
+
+                                // Show appropriate message based on new mode
+                                val message = when (newMode) {
+                                    is com.arcgismaps.location.LocationDisplayAutoPanMode.CompassNavigation,
+                                    is com.arcgismaps.location.LocationDisplayAutoPanMode.Navigation -> {
+                                        context.getString(com.enbridge.gdsgpscollection.R.string.msg_location_following_enabled)
+                                    }
+
+                                    else -> {
+                                        context.getString(com.enbridge.gdsgpscollection.R.string.msg_location_following_disabled)
+                                    }
+                                }
+
+                                snackbarHostState.showSnackbar(message)
                             }
                             screenState.setToolbarExpanded(false)
                         },
@@ -405,12 +571,19 @@ fun MainMapScreen(
                 },
                 onPostDataSnackbar = {
                     scope.launch {
-                        snackbarHostState.showSnackbar("Data posted successfully")
+                        snackbarHostState.showSnackbar(
+                            context.getString(com.enbridge.gdsgpscollection.R.string.msg_data_downloaded_successfully)
+                        )
                     }
                 },
                 getCurrentMapExtent = {
                     screenState.coordinateState.currentViewpoint?.toEnvelope()
                 },
+                initialViewpoint = screenState.bottomSheetState.manageESCapturedViewpoint,
+                onRestoreViewpoint = { viewpoint ->
+                    mainMapViewModel.restoreViewpoint(viewpoint)
+                },
+                snackbarHostState = snackbarHostState,
                 onGeodatabasesDownloaded = { geodatabaseInfos ->
                     Logger.i(
                         "MainMapScreen",
@@ -511,6 +684,20 @@ fun MainMapScreen(
                 onToggleOsmVisibility = { visible ->
                     mainMapViewModel.toggleOsmVisibility(visible)
                 }
+            )
+        }
+
+        // Debug settings screen
+        if (showDebugSettings) {
+            DebugSettingsScreen(
+                onNavigateBack = { showDebugSettings = false },
+                locationMode = if (locationFeatureFlags.useSimulatedLocation) {
+                    context.getString(com.enbridge.gdsgpscollection.R.string.debug_location_simulated)
+                } else {
+                    context.getString(com.enbridge.gdsgpscollection.R.string.debug_location_real)
+                },
+                currentLocation = mainMapViewModel.currentLocation.collectAsStateWithLifecycle().value,
+                isLocationAvailable = mainMapViewModel.isLocationAvailable.collectAsStateWithLifecycle().value
             )
         }
     }

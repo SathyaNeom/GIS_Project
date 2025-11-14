@@ -4,6 +4,7 @@ package com.enbridge.gdsgpscollection.designsystem.components
  * @author Sathya Narayanan
  */
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
@@ -25,13 +26,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 
+/**
+ * Custom top app bar component with optional custom actions.
+ *
+ * @param title The title text displayed in the app bar
+ * @param onActionClick Default action click handler (used when actions is null)
+ * @param modifier Optional modifier for the top bar
+ * @param navigationIcon Optional navigation icon composable (typically a menu or back button)
+ * @param actions Optional custom actions composable - when provided, overrides the default search icon
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
     title: String,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
-    navigationIcon: @Composable (() -> Unit)? = null
+    navigationIcon: @Composable (() -> Unit)? = null,
+    actions: @Composable (RowScope.() -> Unit)? = null
 ) {
     TopAppBar(
         title = {
@@ -44,7 +55,8 @@ fun AppTopBar(
         navigationIcon = {
             navigationIcon?.invoke()
         },
-        actions = {
+        actions = actions ?: {
+            // Default search icon action
             IconButton(onClick = onActionClick) {
                 Icon(
                     imageVector = Icons.Default.Search,
