@@ -1,7 +1,7 @@
 # GdsGpsCollection - Android Application
 
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](docs/TESTING.md)
-[![Tests](https://img.shields.io/badge/tests-200%2B-success)](docs/TESTING.md)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](docs/TESTING_GUIDE.md)
+[![Tests](https://img.shields.io/badge/tests-200%2B-success)](docs/TESTING_GUIDE.md)
 [![Android](https://img.shields.io/badge/android-14%2B-blue)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/kotlin-2.0.0-purple)](https://kotlinlang.org)
 
@@ -180,7 +180,6 @@ GdsGpsCollection/
 All application code is located in `app/src/main/java/com/enbridge/gdsgpscollection/` with the following package structure:
 
 ```
-
 com.enbridge.gdsgpscollection/
 ├── data/ # Data Layer
 │ ├── api/ # REST API interfaces and services
@@ -368,10 +367,20 @@ Before Production Release:
 
 - **[README.md](README.md)** - This file (project overview)
 - **[QUICK_START.md](QUICK_START.md)** - Setup and configuration guide
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Comprehensive architecture guide
 
 ### Detailed Documentation
 
-- **[docs/TESTING.md](docs/TESTING.md)** - Comprehensive testing guide
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete architecture documentation
+    - Clean Architecture with MVVM pattern explained
+    - Layer-by-layer component breakdown
+    - Architectural patterns (Dependency Injection, Repository, Facade, Delegate)
+    - Development standards and naming conventions
+    - Step-by-step guide for scaling the architecture
+    - Best practices and common scenarios
+    - Testing strategies
+
+- **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** - Comprehensive testing guide
     - Test structure and organization
     - Running tests and generating reports
     - Writing new tests
@@ -431,7 +440,8 @@ Before Production Release:
    .\gradlew.bat installElectronicDebug
    ```
 
-For detailed setup instructions, see **[QUICK_START.md](QUICK_START.md)**.
+For detailed setup instructions, see **[QUICK_START.md](QUICK_START.md)**.  
+For architecture and codebase understanding, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ## String Resource Management
 
@@ -604,8 +614,9 @@ When contributing to this project:
 
 ### Project Documentation
 
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Quick Start**: [QUICK_START.md](QUICK_START.md)
-- **Testing**: [docs/TESTING.md](docs/TESTING.md)
+- **Testing**: [TESTING_GUIDE.md](TESTING_GUIDE.md)
 - **Known Issues**: [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)
 - **Roadmap**: [docs/FUTURE_UPGRADES.md](docs/FUTURE_UPGRADES.md)
 
@@ -626,6 +637,6 @@ For questions or support, please contact the development team.
 
 ## Last Updated
 
-March 2025  
+November 2025  
 **Version**: 1.1.0  
 **Status**: Production Ready  

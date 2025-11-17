@@ -121,8 +121,9 @@ carefully before building and publishing your release APK/AAB.
 - [ ] **Linter checks pass** with no critical issues
 - [ ] **Code follows project conventions**
     - Kotlin style guide
-    - Clean Architecture principles
+  - Clean Architecture principles (see [ARCHITECTURE.md](ARCHITECTURE.md))
     - Naming conventions
+  - Development standards documented in architecture guide
 
 ### String Resources
 
@@ -416,12 +417,12 @@ apksigner verify --verbose app-electronic-release.apk
 
 ## Important Files Locations
 
-| File | Location | Purpose |
-|------|----------|---------|
-| Release APK | `app/build/outputs/apk/[variant]/release/` | Installable APK |
-| App Bundle (AAB) | `app/build/outputs/bundle/[variant]Release/` | Google Play upload |
+| File             | Location                                      | Purpose             |
+|------------------|-----------------------------------------------|---------------------|
+| Release APK      | `app/build/outputs/apk/[variant]/release/`    | Installable APK     |
+| App Bundle (AAB) | `app/build/outputs/bundle/[variant]Release/`  | Google Play upload  |
 | ProGuard Mapping | `app/build/outputs/mapping/[variant]Release/` | Crash deobfuscation |
-| Keystore | Outside project (secure location) | App signing |
+| Keystore         | Outside project (secure location)             | App signing         |
 
 ---
 

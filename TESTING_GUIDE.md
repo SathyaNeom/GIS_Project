@@ -7,6 +7,9 @@ This project has two types of tests:
 1. **Unit Tests** - Run on your local JVM (no device needed)
 2. **UI/Instrumented Tests** - Run on Android device/emulator (device required)
 
+For a comprehensive understanding of the application's architecture and component responsibilities,
+refer to **[ARCHITECTURE.md](ARCHITECTURE.md)** before writing tests.
+
 ## Test Structure
 
 ```

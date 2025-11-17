@@ -10,17 +10,18 @@ development of the application. For current known issues, see `docs/KNOWN_ISSUES
 
 ## Table of Contents
 
-- [Build & Configuration Issues](#build--configuration-issues)
+- [Build and Configuration Issues](#build-and-configuration-issues)
 - [UI/UX Issues](#uiux-issues)
 - [Testing Infrastructure Issues](#testing-infrastructure-issues)
 - [ArcGIS Map Integration Issues](#arcgis-map-integration-issues)
-- [Architecture & Code Quality Issues](#architecture--code-quality-issues)
+- [Architecture and Code Quality Issues](#architecture-and-code-quality-issues)
+- [Data and Performance Issues](#data-and-performance-issues)
 
 ---
 
-## Build & Configuration Issues
+## Build and Configuration Issues
 
-### ✅ JDK Configuration Error (Resolved: Nov 2025)
+### JDK Configuration Error (Resolved: Nov 2025)
 
 **Issue:** Build failures with "Invalid Gradle JDK configuration found" error
 
@@ -37,7 +38,7 @@ defined in `gradle/config.properties`
 
 ---
 
-### ✅ KAPT/KSP Compatibility (Resolved: Nov 2025)
+### KAPT/KSP Compatibility (Resolved: Nov 2025)
 
 **Issue:** Room's KAPT processor incompatible with Kotlin 2.0.21
 
@@ -63,7 +64,7 @@ defined in `gradle/config.properties`
 
 ---
 
-### ✅ Missing Network Permissions (Resolved: Nov 2025)
+### Missing Network Permissions (Resolved: Nov 2025)
 
 **Issue:** Network requests failing silently due to missing AndroidManifest permissions
 
@@ -82,7 +83,7 @@ defined in `gradle/config.properties`
 
 ## UI/UX Issues
 
-### ✅ Table of Contents - No Legends Displayed (Resolved: Nov 2025)
+### Table of Contents - No Legends Displayed (Resolved: Nov 2025)
 
 **Issue:** Layers in Table of Contents showed no expandable arrows or legend information
 
@@ -92,10 +93,10 @@ in `MainMapViewModel`
 **Solution:**
 
 1. Implemented `extractLegendItemsFromRenderer()` function that:
-    - Loads feature layer to access its renderer
-    - Determines renderer type (SimpleRenderer, UniqueValueRenderer, ClassBreaksRenderer)
-    - Extracts legend information with proper labels
-    - Returns populated `LegendItem` objects
+   - Loads feature layer to access its renderer
+   - Determines renderer type (SimpleRenderer, UniqueValueRenderer, ClassBreaksRenderer)
+   - Extracts legend information with proper labels
+   - Returns populated `LegendItem` objects
 
 2. Updated `loadGeodatabaseLayers()` to call the extraction function
 
@@ -111,7 +112,7 @@ in `MainMapViewModel`
 
 ---
 
-### ✅ OSM Basemap Toggle Not Working (Resolved: Nov 2025)
+### OSM Basemap Toggle Not Working (Resolved: Nov 2025)
 
 **Issue:** Unchecking "Open Street Map" checkbox did not hide the basemap
 
@@ -146,7 +147,7 @@ _map.value = newMap
 
 ---
 
-### ✅ Hardcoded Strings in UI (Resolved: Nov 2025)
+### Hardcoded Strings in UI (Resolved: Nov 2025)
 
 **Issue:** 250+ hardcoded strings throughout the application making localization impossible
 
@@ -161,9 +162,9 @@ _map.value = newMap
 
 **Modules Updated:**
 
-- Login & Authentication (35+ strings)
+- Login and Authentication (35+ strings)
 - Job Card Entry (200+ strings including 70+ field labels)
-- Map & ES Management (40+ strings)
+- Map and ES Management (40+ strings)
 - Common UI components (25+ strings)
 
 **Benefits:**
@@ -177,7 +178,7 @@ _map.value = newMap
 
 ---
 
-### ✅ Offline Banner Display Issues (Resolved: Nov 2025)
+### Offline Banner Display Issues (Resolved: Nov 2025)
 
 **Issue:** Offline banner sometimes appeared below map controls making it hard to notice
 
@@ -194,7 +195,7 @@ _map.value = newMap
 
 ---
 
-### ✅ OSM Checkbox Not Reflecting State (Resolved: Nov 2025)
+### OSM Checkbox Not Reflecting State (Resolved: Nov 2025)
 
 **Issue:** OSM checkbox would reset to checked state even when basemap was hidden
 
@@ -215,7 +216,7 @@ _map.value = newMap
 
 ## Testing Infrastructure Issues
 
-### ✅ Test Application ID Mismatch - Critical (Resolved: Nov 2025)
+### Test Application ID Mismatch - Critical (Resolved: Nov 2025)
 
 **Issue:** All Android instrumented tests failing with process mismatch error:
 
@@ -231,9 +232,9 @@ names between app and test APKs
 
 1. **Removed all `testApplicationId` declarations** from `app/build.gradle.kts`
 2. **Let Gradle auto-generate test package names** with proper `.test` suffix
-3. **Moved `HiltTestActivity` from androidTest to app/src/debug/** - This was the critical fix!
-    - Activity is now part of app process, not test process
-    - Hilt injection works correctly
+3. **Moved `HiltTestActivity` from androidTest to app/src/debug/** - This was the critical fix
+   - Activity is now part of app process, not test process
+   - Hilt injection works correctly
 
 4. Disabled Test Orchestrator (was enabled without dependency)
 5. Updated `ExampleInstrumentedTest` for dynamic package names
@@ -257,7 +258,7 @@ build type suffixes
 
 ---
 
-### ✅ Hilt Test Configuration Complexity (Resolved: Nov 2025)
+### Hilt Test Configuration Complexity (Resolved: Nov 2025)
 
 **Issue:** Instrumented tests failing with Dagger/MissingBinding errors
 
@@ -270,13 +271,13 @@ build type suffixes
 3. Proper test manifest configuration
 4. Configured test instrumentation runner in build.gradle.kts
 
-**Documentation:** Created detailed guide in TESTING.md
+**Documentation:** Created detailed guide in TESTING_GUIDE.md
 
 ---
 
 ## ArcGIS Map Integration Issues
 
-### ✅ Blank Map Screen (Resolved: Nov 2025)
+### Blank Map Screen (Resolved: Nov 2025)
 
 **Issue:** Map displayed white/blank screen on first launch
 
@@ -298,7 +299,7 @@ ARCGIS_API_KEY=your_api_key_here
 
 ---
 
-### ✅ Map Gesture Conflicts with Navigation Drawer (Resolved: Nov 2025)
+### Map Gesture Conflicts with Navigation Drawer (Resolved: Nov 2025)
 
 **Issue:** Swiping from left edge to pan map would open navigation drawer
 
@@ -306,7 +307,7 @@ ARCGIS_API_KEY=your_api_key_here
 
 **Solution:** Set `gesturesEnabled = false` on `ModalNavigationDrawer` for map screen
 
-**Trade-off:** Tap-outside-to-close drawer doesn't work on map screen, but map panning works
+**Trade-off:** Tap-outside-to-close drawer does not work on map screen, but map panning works
 correctly
 
 **Rationale:** Map panning is core functionality used more frequently than drawer access
@@ -315,9 +316,9 @@ correctly
 
 ---
 
-## Architecture & Code Quality Issues
+## Architecture and Code Quality Issues
 
-### ✅ Multi-Module Complexity (Resolved: Nov 2025)
+### Multi-Module Complexity (Resolved: Nov 2025)
 
 **Issue:** 7-module architecture created navigation complexity and onboarding difficulty
 
@@ -341,7 +342,7 @@ correctly
 
 ---
 
-### ✅ MainMapScreen Monolithic Structure (Resolved: Nov 2025)
+### MainMapScreen Monolithic Structure (Resolved: Nov 2025)
 
 **Issue:** `MainMapScreen.kt` was 1,025 lines with 20+ scattered state variables
 
@@ -350,55 +351,30 @@ correctly
 **Solution:** Comprehensive refactoring following SOLID principles:
 
 1. **Created State Holder Pattern:**
-    - `MainMapScreenState.kt` - Grouped state into 4 categories
-    - Reduced 20 state variables to 4 grouped holders
-    - 80% reduction in state clutter
+   - `MainMapScreenState.kt` - Grouped state into 4 categories
+   - Reduced 20 state variables to 4 grouped holders
+   - 80% reduction in state clutter
 
 2. **Created Event System:**
-    - `MainMapScreenEvent.kt` - 20+ event types
-    - Single event handler replaces 7+ callback parameters
-    - Type-safe event handling
+   - `MainMapScreenEvent.kt` - 20+ event types
+   - Single event handler replaces 7+ callback parameters
+   - Type-safe event handling
 
 3. **Extracted Components:**
-    - `MapControlToolbar.kt` (309 lines) - Floating toolbar
-    - `MapModeIndicators.kt` (87 lines) - Mode feedback
-    - `MainMapDialogs.kt` (193 lines) - All dialogs consolidated
-
-4. **Created Developer Guide:**
-    - `DEVELOPER_GUIDE_MAINMAPSCREEN_REFACTORING.md` (898 lines)
-    - Comprehensive patterns and examples
+   - `MapControlToolbar.kt` (309 lines) - Floating toolbar
+   - `MapModeIndicators.kt` (87 lines) - Mode feedback
+   - `MainMapDialogs.kt` (193 lines) - All dialogs consolidated
 
 **Results:**
 
-- Main screen: 1,025 → ~400 lines (61% reduction)
+- Main screen: 1,025 to ~400 lines (61% reduction)
 - Improved testability and maintainability
 - Clear separation of concerns
 - SOLID principles compliance
 
 ---
 
-### ✅ MainMapViewModel Oversized (Resolved: Nov 2025)
-
-**Issue:** `MainMapViewModel.kt` was 816 lines with 9 different responsibilities
-
-**Root Cause:** Monolithic ViewModel handling layer management, basemap, geodatabase, extent,
-network monitoring
-
-**Status:** Identified for future refactoring
-
-**Planned Solution:** Extract delegates following patterns in AGGRESSIVE_REFACTORING_PROMPT.md:
-
-- `LayerManagerDelegate`
-- `BasemapManagerDelegate`
-- `GeodatabaseManagerDelegate`
-- `ExtentManagerDelegate`
-- `NetworkConnectivityDelegate`
-
-**Expected Outcome:** 816 → ~200 lines (75% reduction)
-
----
-
-### ✅ Code Cleanup & Technical Debt (Resolved: Nov 2025)
+### Code Cleanup and Technical Debt (Resolved: Nov 2025)
 
 **Issues Addressed:**
 
@@ -414,30 +390,114 @@ network monitoring
 
 ---
 
+## Data and Performance Issues
+
+### Geodatabase Download Progress Inaccurate (Resolved: Nov 2025)
+
+**Issue:** Progress tracking displayed confusing jumps during geodatabase downloads:
+
+- Progress started at 30% instead of 0%
+- Progress jumped erratically: 31% → 95% → 32% → 33% → 34%
+- Displayed percentage did not reflect actual download status
+
+**Root Causes:**
+
+1. **Race Condition**: Uncancelled progress monitoring coroutine continued emitting updates after
+   the "Processing" stage began, causing backwards progress jumps
+2. **Incorrect Range Mapping**: Job progress (0-100%) was mapped to UI range (30-90%), making
+   downloads appear to start at 30%
+3. **No Progress Smoothing**: Updates arrived at irregular intervals causing abrupt visual jumps
+
+**Solution:**
+
+1. **Race Condition Prevention:**
+   - Stored progress monitoring Job reference
+   - Explicitly cancelled Job before sending 95% "processing" message
+   - Ensured deterministic progress sequence
+
+2. **Improved Progress Mapping:**
+   - Old: 0-5% (connection), 5-10% (storage), 10-30% (init), 30-90% (download), 95% (processing)
+   - New: 0-5% (connection), 5-10% (storage), 10-15% (init), 15-95% (download), 95-100% (processing)
+   - Larger download range (80% vs 60%) provides better granularity
+
+3. **Granular Progress Messages:**
+   - Added contextual messages: "Downloading features", "Downloading attributes", "Downloading
+     geometry", "Finalizing download"
+   - Maps job progress ranges to specific operations for better user feedback
+
+4. **Progress Animation Smoothing:**
+   - Implemented `animateFloatAsState` with 300ms duration
+   - Smooth interpolation between progress values
+   - GPU-accelerated composition for minimal performance impact
+
+**Technical Implementation:**
+
+```kotlin
+// Store and cancel monitoring job to prevent race condition
+val progressMonitoringJob = channel.launch {
+    generateJob.progress.collect { jobProgress ->
+        val adjustedProgress = 0.15f + (jobProgress / 100f * 0.80f)
+        // Map to granular messages based on progress
+        send(ESDataDownloadProgress(adjustedProgress, progressMessage, false))
+    }
+}
+
+val result = generateJob.result()
+progressMonitoringJob.cancel()  // Critical: prevent late updates
+send(ESDataDownloadProgress(0.95f, "Processing geodatabase…"))
+```
+
+**Applied To:**
+
+- Both single-service (Wildcard environment) and multi-service (Project environment) flows
+- `executeDownload()` method for single geodatabase
+- `downloadServiceData()` method for parallel downloads
+
+**Results:**
+
+- Smooth, accurate progress from 0% to 100%
+- No backwards jumps or race conditions
+- Clear contextual feedback at each download stage
+- Improved user experience during long-running operations
+
+**Files Modified:**
+
+- `app/src/main/res/values/strings.xml` - Added 4 granular progress strings
+- `app/src/main/java/com/enbridge/gdsgpscollection/data/repository/ManageESRepositoryImpl.kt` -
+  Fixed race condition in `executeDownload()` and `downloadServiceData()`
+- `app/src/main/java/com/enbridge/gdsgpscollection/designsystem/components/ProgressIndicators.kt` -
+  Added progress animation smoothing
+
+**Performance Impact:**
+
+- Minimal: Single coroutine per download, proper cancellation prevents leaks
+- Animation is GPU-accelerated with negligible CPU impact
+- No changes to network efficiency
+
+---
+
 ## Summary Statistics
 
 ### Issues Resolved by Category
 
-| Category | Count | Impact |
-|----------|-------|--------|
-| Build & Configuration | 3 | High |
-| UI/UX | 5 | High |
-| Testing Infrastructure | 2 | Critical |
-| ArcGIS Integration | 2 | Medium |
-| Architecture | 4 | High |
-| **Total** | **16** | **Mixed** |
+| Category                | Count  | Impact    |
+|-------------------------|--------|-----------|
+| Build and Configuration | 3      | High      |
+| UI/UX                   | 6      | High      |
+| Testing Infrastructure  | 2      | Critical  |
+| ArcGIS Integration      | 2      | Medium    |
+| Architecture            | 3      | High      |
+| Data and Performance    | 1      | High      |
+| **Total**               | **17** | **Mixed** |
 
 ### Lines of Code Improved
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| Largest File | 1,025 lines | ~400 lines | 61% reduction |
-| MainMapViewModel | 816 lines | 816 lines* | Planned: 75% |
-| Test Coverage | 90% | 90% | Maintained |
-| Total Tests | 200+ | 220+ | 10% increase |
-| Hardcoded Strings | 250+ | 0 | 100% fixed |
-
-*MainMapViewModel refactoring planned for future phase
+| Metric            | Before      | After      | Improvement   |
+|-------------------|-------------|------------|---------------|
+| Largest File      | 1,025 lines | ~400 lines | 61% reduction |
+| Hardcoded Strings | 250+        | 0          | 100% fixed    |
+| Total Tests       | 200+        | 220+       | 10% increase  |
+| Test Coverage     | 90%         | 90%        | Maintained    |
 
 ---
 
@@ -450,10 +510,11 @@ network monitoring
 3. **ArcGIS SDK Constraints** - Read-only properties require object recreation patterns
 4. **Build Configuration** - Let Gradle auto-generate test package names
 5. **String Externalization** - Essential for localization, should be done from day one
+6. **Progress Tracking** - Always cancel monitoring coroutines before transitioning to new stages
 
 ### Architecture Decisions
 
-1. **Single Module Appropriate** - For projects <100K LOC, single module is simpler
+1. **Single Module Appropriate** - For projects under 100K LOC, single module is simpler
 2. **Package-Based Organization** - Enforces Clean Architecture without build overhead
 3. **Component Extraction** - Small, focused components improve testability dramatically
 4. **Event Systems** - Reduce parameter proliferation and improve maintainability
@@ -461,7 +522,7 @@ network monitoring
 ### Testing Insights
 
 1. **Hilt Test Activity Location Matters** - Must be in app process, not test process
-2. **Instrumented Tests Need Devices** - Can't run on JVM alone
+2. **Instrumented Tests Need Devices** - Cannot run on JVM alone
 3. **Test Coverage Thresholds** - Enforce via Jacoco to prevent regression
 4. **MockK Relaxed Mocks** - Use sparingly, prefer explicit stubbing
 
@@ -479,16 +540,18 @@ network monitoring
 - [ ] Add proper logging
 - [ ] Update documentation
 - [ ] Test on physical devices
+- [ ] Cancel coroutines properly to prevent race conditions
 
 ### Code Review Focus Areas
 
 - String externalization
-- Test coverage (aim for ≥85%)
-- File size (flag if >300 lines)
+- Test coverage (aim for 85% or higher)
+- File size (flag if over 300 lines)
 - State management patterns
 - SOLID compliance
 - Proper error handling
 - Logging appropriateness
+- Coroutine lifecycle management
 
 ---
 
@@ -497,7 +560,7 @@ network monitoring
 - **Current Issues:** See `docs/KNOWN_ISSUES.md`
 - **Testing Guide:** See `TESTING_GUIDE.md`
 - **Future Plans:** See `docs/FUTURE_UPGRADES.md`
-- **Refactoring Guide:** See `AGGRESSIVE_REFACTORING_PROMPT.md`
+- **Quick Start:** See `QUICK_START.md`
 
 ---
 
@@ -506,3 +569,4 @@ to specific commits or PRs when available for detailed change history.
 
 **Last Review:** November 2025  
 **Next Review:** Quarterly or before major releases
+

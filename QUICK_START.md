@@ -153,7 +153,8 @@ When running the catalog application:
 
 ## Running Tests
 
-The application includes comprehensive testing with 200+ tests achieving ~90% code coverage.
+The application includes comprehensive testing with 200+ tests achieving approximately 90% code
+coverage.
 
 ### Quick Test Commands
 
@@ -190,7 +191,7 @@ After running tests, view reports at:
 | **Presentation** (ViewModels)     | 55+   | ~90%     |
 | **UI** (Compose Screens)          | 25+   | ~60%     |
 
-For detailed testing information, see [docs/TESTING.md](docs/TESTING.md).
+For detailed testing information, see [TESTING_GUIDE.md](TESTING_GUIDE.md).
 
 ## Troubleshooting
 
@@ -264,7 +265,7 @@ For detailed testing information, see [docs/TESTING.md](docs/TESTING.md).
    ```
 2. Check that Robolectric SDK is downloaded (for data layer tests)
 3. For Android tests, ensure device/emulator is running Android 14+
-4. See [docs/TESTING.md](docs/TESTING.md) troubleshooting section
+4. See [TESTING_GUIDE.md](TESTING_GUIDE.md) troubleshooting section
 
 ## Configuration Files
 
@@ -293,8 +294,12 @@ kotlin.code.style=official
 
 After successful setup:
 
-1. Review [docs/TESTING.md](docs/TESTING.md) for testing strategies and guidelines
-2. Consult **ARCHITECTURE.md** for detailed architecture documentation
+1. **Review [ARCHITECTURE.md](ARCHITECTURE.md)** for comprehensive architecture understanding
+   - Understand Clean Architecture with MVVM pattern
+   - Learn about the three-layer structure (Presentation, Domain, Data)
+   - Study component responsibilities and development standards
+   - Follow established patterns for adding new features
+2. Review [docs/TESTING.md](docs/TESTING.md) for testing strategies and guidelines
 3. Explore **design-system/** for UI component reference
 4. Review [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations
 5. Check [docs/FUTURE_UPGRADES.md](docs/FUTURE_UPGRADES.md) for roadmap
@@ -356,11 +361,12 @@ java -version
 
 ## Additional Resources
 
+- **Architecture Guide:** [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Android Studio Documentation:** https://developer.android.com/studio
 - **ArcGIS Maps SDK Documentation:** https://developers.arcgis.com/kotlin
 - **Kotlin Documentation:** https://kotlinlang.org/docs/home.html
 - **Jetpack Compose Documentation:** https://developer.android.com/jetpack/compose
-- **Testing Documentation:** [docs/TESTING.md](docs/TESTING.md)
+- **Testing Documentation:** [TESTING_GUIDE.md](TESTING_GUIDE.md)
 
 ## Support
 
@@ -376,7 +382,6 @@ For technical issues or questions:
 **Quick Links:**
 
 - [Main README](README.md) - Comprehensive project overview
-- [Testing Guide](docs/TESTING.md) - Complete testing documentation
+- [Testing Guide](TESTING_GUIDE.md) - Complete testing documentation
 - [Known Issues](docs/KNOWN_ISSUES.md) - Current limitations and workarounds
 - [Future Upgrades](docs/FUTURE_UPGRADES.md) - Roadmap and planned enhancements
-
