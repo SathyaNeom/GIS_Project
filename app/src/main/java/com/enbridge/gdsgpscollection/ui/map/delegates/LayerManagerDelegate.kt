@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
  * - Layer expansion state for legends
  * - Loading geodatabase layers onto the map
  * - Extracting legend items from renderers
+ * - Tracking layer metadata for service-aware operations
  *
  * @author Sathya Narayanan
  */
@@ -22,6 +23,12 @@ interface LayerManagerDelegate {
      * StateFlow containing the list of all layers with their UI states
      */
     val layerInfoList: StateFlow<List<LayerUiState>>
+
+    /**
+     * StateFlow indicating whether layers are currently being loaded from geodatabase.
+     * Used to prevent operations (like OSM toggle) while loading is in progress.
+     */
+    val isLoadingLayers: StateFlow<Boolean>
 
     /**
      * Toggle visibility of a specific layer on the map.
@@ -74,4 +81,45 @@ interface LayerManagerDelegate {
      * Called when geodatabase is deleted or cleared.
      */
     fun clearLayers()
+
+    /**
+     * Returns metadata for all tracked layers.
+     * Used during map recreation to filter and recreate layers appropriately.
+     *
+     * @return List of LayerMetadata containing service and display configuration
+     */
+    fun getLayerMetadata(): List<com.enbridge.gdsgpscollection.domain.entity.LayerMetadata>
+
+    /**
+     * Checks if a layer is currently visible.
+     *
+     * @param layerId Unique layer identifier
+     * @return true if layer is visible, false otherwise
+     */
+    fun isLayerVisible(layerId: String): Boolean
+
+    /**
+     * Stores metadata for a layer during geodatabase loading.
+     * Associates layer with its service configuration for future operations.
+     *
+     * @param metadata Layer metadata containing service and display configuration
+     */
+    fun storeLayerMetadata(metadata: com.enbridge.gdsgpscollection.domain.entity.LayerMetadata)
+
+    /**
+     * Checks if any layer metadata is currently stored.
+     * Used to determine if layers are ready for operations like recreation.
+     *
+     * @return true if metadata exists, false otherwise
+     */
+    fun hasMetadata(): Boolean
+
+    /**
+     * Applies service prefix-based names to FeatureLayers based on stored metadata.
+     * This ensures layer names follow the pattern: {servicePrefix}{tableName}
+     * Examples: "GDB_Points_Sync", "OP_Lines_Sync", "BM_Polygons_Sync"
+     *
+     * @param featureLayers List of FeatureLayers to name
+     */
+    fun applyLayerNames(featureLayers: List<FeatureLayer>)
 }

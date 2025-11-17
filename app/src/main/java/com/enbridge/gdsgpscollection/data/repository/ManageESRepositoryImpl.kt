@@ -286,11 +286,42 @@ class ManageESRepositoryImpl @Inject constructor(
      * Executes the actual download operation.
      * Extracted to separate method for retry logic.
      *
-     * @param extent The extent to download
-     * @param attempt Current retry attempt number
-     * @param channel Channel for sending progress updates
-     * @return Downloaded Geodatabase
-     * @throws Exception if download fails
+     * **Progress Calculation Strategy:**
+     * This method implements a smooth, monotonically increasing progress display from 0% to 100%
+     * by mapping different download phases to specific progress ranges:
+     *
+     * - **0-5%**: Pre-flight connectivity check
+     * - **5-10%**: Storage validation
+     * - **10-15%**: Task initialization and parameter creation
+     * - **15-95%**: Actual geodatabase generation (mapped from ArcGIS job's 0-100% progress)
+     * - **95-100%**: Post-processing and finalization
+     *
+     * **Race Condition Prevention:**
+     * The ArcGIS `GenerateGeodatabaseJob.progress` Flow emits values asynchronously in a background
+     * coroutine. Without proper cancellation, these emissions can continue AFTER we've moved to the
+     * post-processing phase, causing progress to jump backwards (e.g., 95% → 32% → 33%).
+     *
+     * To prevent this, we:
+     * 1. Store the progress monitoring Job reference
+     * 2. Cancel it explicitly before sending the 95% "processing" message
+     * 3. Ensure all subsequent progress updates are deterministic
+     *
+     * **Granular Progress Messages:**
+     * During the main download phase (15-95%), we provide contextual feedback by mapping
+     * job progress ranges to specific operations:
+     * - 0-30%: Downloading features
+     * - 30-60%: Downloading attributes
+     * - 60-90%: Downloading geometry
+     * - 90-100%: Finalizing data structures
+     *
+     * This enhances UX by showing users what's happening at each stage, rather than a
+     * generic "Downloading data…" message throughout the entire operation.
+     *
+     * @param extent The geographic extent to download data for
+     * @param attempt Current retry attempt number (0-indexed)
+     * @param channel ProducerScope for emitting progress updates to the Flow
+     * @return Successfully downloaded Geodatabase instance
+     * @throws Exception if download fails (network errors, server errors, etc.)
      */
     private suspend fun executeDownload(
         extent: Envelope,
@@ -299,7 +330,7 @@ class ManageESRepositoryImpl @Inject constructor(
     ): com.arcgismaps.data.Geodatabase {
         Logger.d(TAG, "Executing download (attempt ${attempt + 1})")
 
-        // Initialize GeodatabaseSyncTask
+        // ========== PHASE 1: Initialize GeodatabaseSyncTask (10-15%) ==========
         channel.send(
             ESDataDownloadProgress(
                 0.1f,
@@ -307,6 +338,7 @@ class ManageESRepositoryImpl @Inject constructor(
                 false
             )
         )
+        Logger.d(TAG, "Progress: 10% - Initializing GeodatabaseSyncTask")
 
         val geodatabaseSyncTask = GeodatabaseSyncTask(Constants.FEATURE_SERVICE_URL)
 
@@ -317,14 +349,15 @@ class ManageESRepositoryImpl @Inject constructor(
 
         Logger.d(TAG, "GeodatabaseSyncTask loaded successfully")
 
-        // Create generate parameters
+        // ========== PHASE 2: Create Generate Parameters (15%) ==========
         channel.send(
             ESDataDownloadProgress(
-                0.2f,
-                context.getString(R.string.progress_preparing_download),
+                0.15f,
+                context.getString(R.string.progress_connecting),
                 false
             )
         )
+        Logger.d(TAG, "Progress: 15% - Creating geodatabase parameters")
 
         val generateParams = geodatabaseSyncTask
             .createDefaultGenerateGeodatabaseParameters(extent)
@@ -341,42 +374,100 @@ class ManageESRepositoryImpl @Inject constructor(
         // Delete existing geodatabase if present
         val geodatabaseFile = File(geodatabaseFilePath)
         if (geodatabaseFile.exists()) {
-            Logger.d(TAG, "Deleting existing geodatabase")
+            Logger.d(TAG, "Deleting existing geodatabase before download")
             geodatabaseFile.delete()
         }
 
-        // Create and start generate job
-        channel.send(
-            ESDataDownloadProgress(
-                0.3f,
-                context.getString(R.string.progress_generating_geodatabase),
-                false
-            )
-        )
+        // ========== PHASE 3: Start Generate Job and Monitor Progress (15-95%) ==========
+        Logger.d(TAG, "Progress: Starting geodatabase generation job")
 
         val generateJob =
             geodatabaseSyncTask.createGenerateGeodatabaseJob(generateParams, geodatabaseFilePath)
         generateJob.start()
 
-        // Monitor progress in background using the channel's coroutine scope
-        channel.launch {
+        // Track the last emitted progress to ensure monotonic increase
+        var lastEmittedProgress = 0.15f
+
+        /**
+         * Monitor progress in a separate coroutine.
+         *
+         * CRITICAL: We store the Job reference to cancel it before moving to post-processing.
+         * Without cancellation, this coroutine continues emitting stale progress values that
+         * can overwrite the 95% "processing" message, causing the UI to jump backwards.
+         *
+         * Progress Mapping Strategy:
+         * - ArcGIS job progress: 0-100 (from GenerateGeodatabaseJob)
+         * - Mapped to UI progress: 15-95% (80% of total progress range)
+         * - Formula: adjustedProgress = 0.15 + (jobProgress / 100.0 * 0.80)
+         *
+         * This ensures:
+         * 1. Progress starts at 15% (after pre-flight checks)
+         * 2. Progress ends at 95% (before post-processing)
+         * 3. Smooth linear progression throughout the download
+         */
+        val progressMonitoringJob = channel.launch {
             try {
-                generateJob.progress.collect { progress ->
-                    val adjustedProgress = 0.3f + (progress / 100f * 0.6f)
-                    channel.send(
-                        ESDataDownloadProgress(
-                            adjustedProgress,
-                            context.getString(R.string.progress_downloading),
-                            false
+                generateJob.progress.collect { jobProgress ->
+                    // Map job progress (0-100) to UI progress range (15-95%)
+                    val adjustedProgress = 0.15f + (jobProgress / 100f * 0.80f)
+
+                    // Ensure monotonic increase (prevent backwards jumps due to async updates)
+                    if (adjustedProgress > lastEmittedProgress) {
+                        lastEmittedProgress = adjustedProgress
+
+                        // Provide granular contextual messages based on download phase
+                        val progressMessage = when {
+                            jobProgress < 30 -> context.getString(R.string.progress_downloading_features)
+                            jobProgress < 60 -> context.getString(R.string.progress_downloading_attributes)
+                            jobProgress < 90 -> context.getString(R.string.progress_downloading_geometry)
+                            else -> context.getString(R.string.progress_finalizing)
+                        }
+
+                        channel.send(
+                            ESDataDownloadProgress(
+                                adjustedProgress,
+                                progressMessage,
+                                false
+                            )
                         )
-                    )
+
+                        Logger.v(
+                            TAG,
+                            "Progress: ${(adjustedProgress * 100).toInt()}% (Job: $jobProgress%) - $progressMessage"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                Logger.d(TAG, "Progress collection ended: ${e.message}")
+                // Expected when job completes or is cancelled
+                Logger.d(TAG, "Progress monitoring ended: ${e.message}")
             }
         }
 
-        // Wait for completion
+        // Wait for the generate job to complete
+        val result = generateJob.result()
+
+        // ========== CRITICAL: Cancel Progress Monitoring Before Post-Processing ==========
+        /**
+         * Cancel the progress monitoring coroutine BEFORE sending the "processing" message.
+         *
+         * Rationale:
+         * The `generateJob.progress` Flow may continue emitting values even after `result()`
+         * returns, due to internal buffering and async execution. If we don't cancel the
+         * monitoring job, late-arriving progress updates (e.g., 32%, 33%) can overwrite
+         * the 95% "processing" message we're about to send, causing confusing UI jumps.
+         *
+         * By cancelling here, we guarantee:
+         * 1. No more progress updates from the monitoring coroutine
+         * 2. Clean transition to post-processing phase
+         * 3. Deterministic progress sequence: 15% → ... → 94% → 95% → 100%
+         */
+        progressMonitoringJob.cancel()
+        Logger.d(
+            TAG,
+            "Progress monitoring cancelled - preventing race condition with post-processing phase"
+        )
+
+        // ========== PHASE 4: Post-Processing (95-100%) ==========
         channel.send(
             ESDataDownloadProgress(
                 0.95f,
@@ -384,8 +475,9 @@ class ManageESRepositoryImpl @Inject constructor(
                 false
             )
         )
+        Logger.d(TAG, "Progress: 95% - Processing geodatabase")
 
-        val result = generateJob.result()
+        // Return the geodatabase or throw if generation failed
         return result.getOrElse { error ->
             Logger.e(TAG, "Geodatabase generation failed", error)
             throw error
@@ -609,6 +701,19 @@ class ManageESRepositoryImpl @Inject constructor(
      * This method is similar to [downloadESData] but accepts a service configuration
      * and uses dynamic file naming based on service ID.
      *
+     * **Progress Calculation Strategy:**
+     * Implements the same smooth progress tracking as [executeDownload]:
+     * - **0-10%**: Pre-flight checks (implicit, handled by caller)
+     * - **10-15%**: Task initialization
+     * - **15-95%**: Actual download with granular progress messages
+     * - **95-100%**: Post-processing
+     *
+     * **Multi-Service Context:**
+     * When used in parallel downloads (Project environment), this method's progress
+     * is aggregated with other service downloads to show combined overall progress.
+     * Each service progresses independently from 0-100%, and the
+     * [downloadMultipleServices] method calculates the average for display.
+     *
      * @param extent The geographic extent to download data for
      * @param featureServiceConfig Configuration for the target feature service
      * @return Flow emitting download progress updates for this service
@@ -621,7 +726,7 @@ class ManageESRepositoryImpl @Inject constructor(
         Logger.d(TAG, "Service ID: ${featureServiceConfig.id}, URL: ${featureServiceConfig.url}")
 
         try {
-            // Send starting message
+            // ========== PHASE 1: Initialize (0-15%) ==========
             send(
                 ESDataDownloadProgress(
                     0.0f,
@@ -629,8 +734,18 @@ class ManageESRepositoryImpl @Inject constructor(
                     false
                 )
             )
+            Logger.d(TAG, "Progress: 0% - Starting download for ${featureServiceConfig.name}")
 
             // Initialize GeodatabaseSyncTask with service URL
+            send(
+                ESDataDownloadProgress(
+                    0.10f,
+                    context.getString(R.string.progress_initializing),
+                    false
+                )
+            )
+            Logger.d(TAG, "Progress: 10% - Initializing task for ${featureServiceConfig.name}")
+
             val geodatabaseSyncTask = GeodatabaseSyncTask(featureServiceConfig.url)
             geodatabaseSyncTask.load().onFailure { error ->
                 Logger.e(
@@ -654,11 +769,12 @@ class ManageESRepositoryImpl @Inject constructor(
             // Create generate parameters
             send(
                 ESDataDownloadProgress(
-                    0.2f,
-                    context.getString(R.string.progress_preparing_download),
+                    0.15f,
+                    context.getString(R.string.progress_connecting),
                     false
                 )
             )
+            Logger.d(TAG, "Progress: 15% - Creating parameters for ${featureServiceConfig.name}")
 
             val generateParams = geodatabaseSyncTask
                 .createDefaultGenerateGeodatabaseParameters(extent)
@@ -697,41 +813,79 @@ class ManageESRepositoryImpl @Inject constructor(
                 geodatabaseFile.delete()
             }
 
-            // Create and start generate job
-            send(
-                ESDataDownloadProgress(
-                    0.3f,
-                    context.getString(R.string.progress_generating_geodatabase),
-                    false
-                )
+            // ========== PHASE 2: Generate Job and Monitor Progress (15-95%) ==========
+            Logger.d(
+                TAG,
+                "Progress: Starting geodatabase generation for ${featureServiceConfig.name}"
             )
 
             val generateJob =
                 geodatabaseSyncTask.createGenerateGeodatabaseJob(generateParams, servicePath)
             generateJob.start()
 
-            // Monitor progress
-            launch {
+            // Track last emitted progress for monotonic increase
+            var lastEmittedProgress = 0.15f
+
+            /**
+             * Monitor progress with race condition prevention.
+             * Same strategy as [executeDownload]: store Job reference for explicit cancellation.
+             */
+            val progressMonitoringJob = launch {
                 try {
-                    generateJob.progress.collect { progress ->
-                        val adjustedProgress = 0.3f + (progress / 100f * 0.6f)
-                        send(
-                            ESDataDownloadProgress(
-                                adjustedProgress,
-                                context.getString(R.string.progress_downloading),
-                                false
+                    generateJob.progress.collect { jobProgress ->
+                        // Map job progress (0-100) to UI progress range (15-95%)
+                        val adjustedProgress = 0.15f + (jobProgress / 100f * 0.80f)
+
+                        // Ensure monotonic increase
+                        if (adjustedProgress > lastEmittedProgress) {
+                            lastEmittedProgress = adjustedProgress
+
+                            // Provide granular contextual messages
+                            val progressMessage = when {
+                                jobProgress < 30 -> context.getString(R.string.progress_downloading_features)
+                                jobProgress < 60 -> context.getString(R.string.progress_downloading_attributes)
+                                jobProgress < 90 -> context.getString(R.string.progress_downloading_geometry)
+                                else -> context.getString(R.string.progress_finalizing)
+                            }
+
+                            send(
+                                ESDataDownloadProgress(
+                                    adjustedProgress,
+                                    progressMessage,
+                                    false
+                                )
                             )
-                        )
+
+                            Logger.v(
+                                TAG,
+                                "${featureServiceConfig.name} Progress: ${(adjustedProgress * 100).toInt()}% (Job: $jobProgress%)"
+                            )
+                        }
                     }
                 } catch (e: Exception) {
+                    // Expected when job completes or is cancelled
                     Logger.d(
                         TAG,
-                        "Progress collection ended for ${featureServiceConfig.name}: ${e.message}"
+                        "Progress monitoring ended for ${featureServiceConfig.name}: ${e.message}"
                     )
                 }
             }
 
-            // Wait for completion
+            // Wait for the generate job to complete
+            val result = generateJob.result()
+
+            // ========== CRITICAL: Cancel Progress Monitoring Before Post-Processing ==========
+            /**
+             * Prevent race condition by canceling progress monitoring before post-processing.
+             * This ensures no late-arriving progress updates can overwrite the 95% message.
+             */
+            progressMonitoringJob.cancel()
+            Logger.d(
+                TAG,
+                "Progress monitoring cancelled for ${featureServiceConfig.name} - preventing race condition"
+            )
+
+            // ========== PHASE 3: Post-Processing (95-100%) ==========
             send(
                 ESDataDownloadProgress(
                     0.95f,
@@ -739,8 +893,8 @@ class ManageESRepositoryImpl @Inject constructor(
                     false
                 )
             )
+            Logger.d(TAG, "Progress: 95% - Processing ${featureServiceConfig.name}")
 
-            val result = generateJob.result()
             result.onSuccess { geodatabase ->
                 Logger.i(TAG, "Download completed for ${featureServiceConfig.name}")
                 send(

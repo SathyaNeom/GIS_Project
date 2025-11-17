@@ -54,6 +54,7 @@ import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.ui.debug.DebugSettingsScreen
 import com.enbridge.gdsgpscollection.ui.map.components.CollectESBottomSheet
 import com.enbridge.gdsgpscollection.ui.map.components.CoordinateInfoBar
+import com.enbridge.gdsgpscollection.ui.map.components.LayerRecreationProgress
 import com.enbridge.gdsgpscollection.ui.map.components.LocationPermissionHandler
 import com.enbridge.gdsgpscollection.ui.map.components.MainMapDialogs
 import com.enbridge.gdsgpscollection.ui.map.components.ManageESBottomSheet
@@ -143,6 +144,8 @@ fun MainMapScreen(
     val isOffline by mainMapViewModel.isOffline.collectAsStateWithLifecycle()
     val currentAutoPanMode by mainMapViewModel.currentAutoPanMode.collectAsStateWithLifecycle()
     val targetViewpoint by mainMapViewModel.targetViewpoint.collectAsStateWithLifecycle()
+    val isRecreatingLayers by mainMapViewModel.isRecreatingLayers.collectAsStateWithLifecycle()
+    val isLoadingLayers by mainMapViewModel.isLoadingLayers.collectAsStateWithLifecycle()
 
     // Determine feature visibility
     val showJobCardEntry = appVariant == "electronic"
@@ -369,7 +372,7 @@ fun MainMapScreen(
                             isOffline = isOffline,
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .zIndex(10f)
+                                .zIndex(30f) // Above all other UI elements including progress indicator
                         )
                     }
 
@@ -513,6 +516,16 @@ fun MainMapScreen(
                         measurementMode = screenState.interactionState.measurementMode,
                         modifier = Modifier.align(Alignment.TopCenter)
                     )
+
+                    // Layer recreation progress
+                    if (isRecreatingLayers) {
+                        LayerRecreationProgress(
+                            isRecreating = isRecreatingLayers,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .zIndex(20f) // Above all other UI elements
+                        )
+                    }
                 }
             }
         }
@@ -590,8 +603,8 @@ fun MainMapScreen(
                         "onGeodatabasesDownloaded callback invoked with ${geodatabaseInfos.size} geodatabase(s)"
                     )
 
-                    // Load layers from all downloaded geodatabases
-                    geodatabaseInfos.forEach { info ->
+                    // Filter geodatabases that should be displayed on map
+                    val geodatabasesToDisplay = geodatabaseInfos.filter { info ->
                         Logger.d(
                             "MainMapScreen",
                             "Processing ${info.serviceName} geodatabase: ${info.fileName}"
@@ -602,19 +615,32 @@ fun MainMapScreen(
                             "Geodatabase loadStatus: ${info.geodatabase.loadStatus.value}"
                         )
 
-                        // Only load layers for geodatabases that should be displayed on map
                         if (info.displayOnMap) {
                             Logger.d(
                                 "MainMapScreen",
-                                "Loading layers from ${info.serviceName} to map"
+                                "Will load layers from ${info.serviceName} to map"
                             )
-                            mainMapViewModel.loadGeodatabaseLayers(info.geodatabase)
+                            true
                         } else {
                             Logger.d(
                                 "MainMapScreen",
                                 "Skipping map display for ${info.serviceName} (displayOnMap=false)"
                             )
+                            false
                         }
+                    }
+
+                    // Load all geodatabases at once (more efficient than one-by-one)
+                    if (geodatabasesToDisplay.isNotEmpty()) {
+                        Logger.i(
+                            "MainMapScreen",
+                            "Loading ${geodatabasesToDisplay.size} geodatabase(s) onto map"
+                        )
+                        mainMapViewModel.loadMultipleGeodatabases(
+                            geodatabasesToDisplay.map { it.geodatabase }
+                        )
+                    } else {
+                        Logger.w("MainMapScreen", "No geodatabases to display on map")
                     }
 
                     // Save timestamp after all geodatabases are processed
@@ -672,6 +698,7 @@ fun MainMapScreen(
                 layers = layerInfoList,
                 onDismissRequest = { screenState.dismissAllBottomSheets() },
                 osmVisible = osmVisible,
+                isLoadingLayers = isLoadingLayers,
                 onToggleLayerVisibility = { id, visible ->
                     mainMapViewModel.toggleLayerVisibility(id, visible)
                 },

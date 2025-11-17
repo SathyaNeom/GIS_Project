@@ -393,28 +393,58 @@ class ManageESViewModel @Inject constructor(
 
                         // Load geodatabase and pass to callback
                         progress.geodatabase?.let { geodatabase ->
-                            Logger.d(TAG, "Notifying geodatabase downloaded")
+                            Logger.d(TAG, "Loading geodatabase before notifying callback")
 
-                            // Wrap single geodatabase in list for consistent callback
-                            val geodatabaseInfo = GeodatabaseInfo(
-                                serviceId = "wildfire",
-                                serviceName = "Wildfire",
-                                fileName = "wildfire.geodatabase",
-                                geodatabase = geodatabase,
-                                lastSyncTime = System.currentTimeMillis(),
-                                layerCount = geodatabase.featureTables.size,
-                                fileSizeKB = 0, // Will be calculated by repository
-                                displayOnMap = true
-                            )
+                            // CRITICAL: Load geodatabase first to populate featureTables
+                            geodatabase.load().onSuccess {
+                                Logger.d(
+                                    TAG,
+                                    "Geodatabase loaded: ${geodatabase.featureTables.size} tables"
+                                )
 
-                            onGeodatabasesDownloaded(listOf(geodatabaseInfo))
-                            onSaveTimestamp()
+                                // Wrap single geodatabase in list for consistent callback
+                                val geodatabaseInfo = GeodatabaseInfo(
+                                    serviceId = "wildfire",
+                                    serviceName = "Wildfire",
+                                    fileName = "wildfire.geodatabase",
+                                    geodatabase = geodatabase,
+                                    lastSyncTime = System.currentTimeMillis(),
+                                    layerCount = geodatabase.featureTables.size,
+                                    fileSizeKB = 0, // Will be calculated by repository
+                                    displayOnMap = true
+                                )
+
+                                Logger.d(
+                                    TAG,
+                                    "Notifying geodatabase downloaded with ${geodatabaseInfo.layerCount} layers"
+                                )
+                                onGeodatabasesDownloaded(listOf(geodatabaseInfo))
+                                onSaveTimestamp()
+
+                                // Reload changed data after download
+                                loadChangedData()
+
+                                _uiState.update { it.copy(isDownloadInProgress = false) }
+                            }.onFailure { error ->
+                                Logger.e(TAG, "Failed to load geodatabase", error)
+                                _uiState.update {
+                                    it.copy(
+                                        isDownloadInProgress = false,
+                                        isDownloading = false,
+                                        downloadError = "Failed to load geodatabase: ${error.message}"
+                                    )
+                                }
+                            }
+                        } ?: run {
+                            Logger.e(TAG, "Download completed but geodatabase is null")
+                            _uiState.update {
+                                it.copy(
+                                    isDownloadInProgress = false,
+                                    isDownloading = false,
+                                    downloadError = "Download completed but no geodatabase was created"
+                                )
+                            }
                         }
-
-                        // Reload changed data after download
-                        loadChangedData()
-
-                        _uiState.update { it.copy(isDownloadInProgress = false) }
                     }
                 }
             } catch (e: Exception) {

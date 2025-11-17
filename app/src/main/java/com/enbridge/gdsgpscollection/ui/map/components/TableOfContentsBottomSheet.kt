@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -66,6 +68,7 @@ import java.io.File
  *
  * @param layers List of layer UI states with their visibility and legend information
  * @param osmVisible Current visibility state of the OpenStreetMap basemap
+ * @param isLoadingLayers Whether layers are currently being loaded from geodatabase
  * @param onDismissRequest Callback invoked when the bottom sheet is dismissed
  * @param onToggleLayerVisibility Callback invoked when a layer's visibility is toggled
  * @param onToggleLayerExpanded Callback invoked when a layer's expansion state changes
@@ -78,6 +81,7 @@ import java.io.File
 fun TableOfContentsBottomSheet(
     layers: List<LayerUiState>,
     osmVisible: Boolean,
+    isLoadingLayers: Boolean = false,
     onDismissRequest: () -> Unit,
     onToggleLayerVisibility: (layerId: String, visible: Boolean) -> Unit,
     onToggleLayerExpanded: (layerId: String) -> Unit,
@@ -187,7 +191,12 @@ fun TableOfContentsBottomSheet(
             ) {
                 Checkbox(
                     checked = osmVisible,
-                    onCheckedChange = { onToggleOsmVisibility(it) }
+                    onCheckedChange = if (isLoadingLayers) {
+                        null // Disable interaction when loading
+                    } else {
+                        { checked -> onToggleOsmVisibility(checked) }
+                    },
+                    enabled = !isLoadingLayers
                 )
 
                 Text(
@@ -196,6 +205,14 @@ fun TableOfContentsBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(start = Spacing.small)
                 )
+
+                if (isLoadingLayers) {
+                    Spacer(modifier = Modifier.width(Spacing.small))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
             }
         }
     }
@@ -427,6 +444,7 @@ private fun TableOfContentsBottomSheetPreview() {
                 )
             ),
             osmVisible = true,
+            isLoadingLayers = false,
             onDismissRequest = {},
             onToggleLayerVisibility = { _, _ -> },
             onToggleLayerExpanded = {},
@@ -443,6 +461,7 @@ private fun TableOfContentsBottomSheetEmptyPreview() {
         TableOfContentsBottomSheet(
             layers = emptyList(),
             osmVisible = false,
+            isLoadingLayers = false,
             onDismissRequest = {},
             onToggleLayerVisibility = { _, _ -> },
             onToggleLayerExpanded = {},

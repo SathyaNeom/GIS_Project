@@ -506,6 +506,12 @@
     <string name="progress_sync_complete">Synchronization complete!</string>
     <string name="progress_generating_geodatabase">Generating geodatabase</string>
 
+    <!-- Granular Download Progress Messages (Enhanced UX) -->
+    <string name="progress_downloading_features">Downloading features…</string>
+    <string name="progress_downloading_attributes">Downloading attributes…</string>
+    <string name="progress_downloading_geometry">Downloading geometry…</string>
+    <string name="progress_finalizing">Finalizing download…</string>
+
     <!-- Table of Contents (Layer Management) -->
     <string name="action_manage_layers">Table of Contents</string>
     <string name="layers_bottom_sheet_title">Table of Contents</string>
@@ -628,6 +634,16 @@
     <string name="debug_current_location">Current Location</string>
     <string name="debug_location_unavailable">Location unavailable</string>
     <string name="debug_location_available">Location available</string>
+
+    <!-- Map Layer Operations -->
+    <string name="error_toggle_osm_visibility">Failed to toggle basemap visibility. Please try again.</string>
+    <string name="error_layer_recreation">Unable to recreate map layers. Your data is safe.</string>
+    <string name="msg_updating_map_layers">Updating map layers…</string>
+    <string name="msg_layers_filtered_for_display">Displaying %1$d of %2$d layers on map</string>
+    <string name="error_osm_toggle_layers_loading">Please wait for layers to finish loading</string>
+    <string name="error_osm_toggle_failed">Failed to toggle basemap visibility</string>
+    <string name="msg_clearing_geodatabase">Clearing geodatabase…</string>
+    <string name="msg_loading_layers">Loading layers…</string>
 
     <!-- Layer Display Status -->
 </resources>

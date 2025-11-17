@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
  * - Basemap style management
  * - OSM basemap visibility toggling
  * - Map recreation with/without basemap
+ * - Layer recreation progress tracking
  *
  * @author Sathya Narayanan
  */
@@ -20,6 +21,12 @@ interface BasemapManagerDelegate {
      * StateFlow indicating whether the OSM basemap is visible
      */
     val osmVisible: StateFlow<Boolean>
+
+    /**
+     * StateFlow indicating whether layer recreation is in progress.
+     * Used to show progress indicator for operations taking >500ms.
+     */
+    val isRecreating: StateFlow<Boolean>
 
     /**
      * Current basemap style being used
@@ -49,4 +56,20 @@ interface BasemapManagerDelegate {
      * @return New map with updated basemap visibility
      */
     suspend fun toggleOsmVisibility(visible: Boolean, currentMap: ArcGISMap): ArcGISMap
+
+    /**
+     * Create a new map with or without basemap (NO operational layers).
+     * The caller is responsible for adding layers to the returned map.
+     *
+     * @param visible Whether to include the basemap
+     * @param currentMap The current map to copy settings from
+     * @return New map without operational layers
+     */
+    suspend fun createMapWithBasemapVisibility(visible: Boolean, currentMap: ArcGISMap): ArcGISMap
+
+    /**
+     * Clears the layer cache.
+     * Should be called when geodatabase is deleted or reloaded.
+     */
+    fun clearLayerCache()
 }

@@ -23,8 +23,8 @@ object Constants {
      * Center point for map initialization
      */
     object SanFrancisco {
-        const val CENTER_X = -13630845.0  // Longitude in Web Mercator
-        const val CENTER_Y = 4544861.0    // Latitude in Web Mercator
+        const val CENTER_X = -13633371.0439  // Longitude in Web Mercator
+        const val CENTER_Y = 4546384.3076    // Latitude in Web Mercator
         const val INITIAL_SCALE = 72000.0
 
         // WGS84 coordinates for reference

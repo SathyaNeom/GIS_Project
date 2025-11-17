@@ -98,7 +98,7 @@ import com.arcgismaps.geometry.Envelope
 import kotlinx.coroutines.launch
 
 /**
- * Bottom sheet for managing ES (Electronic Services) edits
+ * Bottom sheet for managing edits
  * Provides functionality to download, post, and manage ES data
  */
 @OptIn(ExperimentalMaterial3Api::class)
