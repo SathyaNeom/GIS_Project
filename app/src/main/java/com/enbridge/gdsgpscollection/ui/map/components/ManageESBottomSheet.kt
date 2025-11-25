@@ -96,6 +96,7 @@ import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
 import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.geometry.Envelope
 import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.BuildConfig
 import kotlinx.coroutines.launch
 
 /**
@@ -628,17 +629,20 @@ private fun ManageESBottomSheetContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.small)
             ) {
-                // Delete JC Button - enabled only when a job card is selected
-                SecondaryButton(
-                    text = stringResource(R.string.managees_delete_jc),
-                    onClick = onDeleteJobCardsClicked,
-                    icon = Icons.Default.Delete,
-                    modifier = Modifier.weight(1f),
-                    enabled = uiState.selectedJobCard != null &&
-                            !uiState.isDeletingJobCards &&
-                            !uiState.isDownloading &&
-                            !uiState.isUploading
-                )
+                // Delete JC Button - only shown for electronic service variant
+                // and enabled only when a job card is selected
+                if (BuildConfig.APP_VARIANT == "electronic") {
+                    SecondaryButton(
+                        text = stringResource(R.string.managees_delete_jc),
+                        onClick = onDeleteJobCardsClicked,
+                        icon = Icons.Default.Delete,
+                        modifier = Modifier.weight(1f),
+                        enabled = uiState.selectedJobCard != null &&
+                                !uiState.isDeletingJobCards &&
+                                !uiState.isDownloading &&
+                                !uiState.isUploading
+                    )
+                }
 
                 // Post Data Button - enabled only when a job card is selected
                 PrimaryButton(

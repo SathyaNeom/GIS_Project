@@ -680,4 +680,35 @@
     <string name="filter_status_inactive">Filter inactive</string>
     <string name="filter_center_viewport">Filter center: Viewport</string>
     <string name="filter_center_location">Filter center: Your location</string>
+
+    <!-- Sync Warning Dialogs -->
+    <string name="dialog_sync_warning_title">Unsaved Changes Detected</string>
+    <string name="dialog_sync_warning_message">You have unsaved changes that must be synced to the server before downloading new data.\n\nClick "Sync &amp; Continue" to upload your changes first.</string>
+
+    <!-- Clear Data Dialogs -->
+    <string name="dialog_clear_title">Clear Data</string>
+    <string name="dialog_clear_message">This will delete all downloaded geodatabase files. Are you sure?</string>
+
+    <string name="dialog_clear_unsaved_title">Warning: Unsaved Changes</string>
+    <string name="dialog_clear_unsaved_message">You have unsaved changes that have not been synced to the server.\n\nClearing will permanently delete these changes.\n\nTo confirm deletion, type DELETE below:</string>
+
+    <string name="dialog_clear_confirmation_label">Type DELETE to confirm</string>
+    <string name="dialog_clear_confirmation_hint">DELETE</string>
+    <string name="dialog_clear_confirmation_instruction">This action cannot be undone</string>
+
+    <!-- Sync Actions -->
+    <string name="action_sync_and_continue">Sync &amp; Continue</string>
+    <string name="sync_in_progress_message">Syncing changes to server…</string>
+    <string name="sync_success_message">Changes synced successfully</string>
+    <string name="sync_failed_message">Sync failed: %1$s</string>
+    <string name="error_sync_required">Please sync your changes before proceeding</string>
+
+    <!-- Sync Progress Messages (Granular) -->
+    <string name="progress_sync_initializing">Initializing sync…</string>
+    <string name="progress_sync_connecting_server">Connecting to server…</string>
+    <string name="progress_sync_uploading_features">Uploading features…</string>
+    <string name="progress_sync_uploading_edits">Uploading edits…</string>
+    <string name="progress_sync_downloading_changes">Downloading server changes…</string>
+    <string name="progress_sync_finalizing_sync">Finalizing sync…</string>
+    <string name="progress_sync_completed">Sync completed successfully!</string>
 </resources>

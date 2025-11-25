@@ -1365,4 +1365,81 @@ class ManageESRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /**
+     * Checks if any geodatabase has local edits that need to be synced.
+     *
+     * This method prevents data loss by detecting unsaved changes before destructive operations.
+     * It iterates through all configured geodatabases (Wildfire: 1, Project: 2+) and checks
+     * if any have local edits using the ArcGIS SDK's `Geodatabase.hasLocalEdits()` method.
+     *
+     * Implementation Strategy:
+     * 1. Get current environment configuration (Wildfire or Project)
+     * 2. For each configured service, check if geodatabase file exists
+     * 3. Load the geodatabase and call `hasLocalEdits()`
+     * 4. Return true immediately if ANY geodatabase has edits (fail-fast)
+     * 5. Return false only if ALL geodatabases are clean or don't exist
+     *
+     * Error Handling:
+     * - Geodatabase not found: Skip and continue (no changes to sync)
+     * - Geodatabase load failure: Log error and continue (safe default behavior)
+     * - Unexpected exception: Return failure with error details
+     *
+     * @return Result<Boolean> - true if unsaved changes exist, false otherwise
+     */
+    override suspend fun hasUnsyncedChanges(): Result<Boolean> {
+        return try {
+            Logger.i(TAG, "Checking for unsaved changes in geodatabase(s)")
+
+            val environment = configuration.getCurrentEnvironment()
+            var hasChanges = false
+
+            // Iterate through all configured services
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+
+                // Skip if geodatabase doesn't exist (nothing to sync)
+                if (!geodatabaseFile.exists()) {
+                    Logger.d(TAG, "Geodatabase for ${service.name} does not exist, skipping")
+                    continue
+                }
+
+                Logger.d(TAG, "Checking ${service.name} geodatabase for local edits")
+
+                // Load geodatabase to check for edits
+                val geodatabase = Geodatabase(servicePath)
+                val loadResult = geodatabase.load()
+
+                if (loadResult.isFailure) {
+                    Logger.e(
+                        TAG,
+                        "Failed to load geodatabase for ${service.name}, skipping",
+                        loadResult.exceptionOrNull()
+                    )
+                    geodatabase.close()
+                    continue
+                }
+
+                // CRITICAL: Check for local edits using ArcGIS SDK method
+                if (geodatabase.hasLocalEdits()) {
+                    Logger.w(TAG, "Geodatabase ${service.name} has unsaved changes")
+                    hasChanges = true
+                    geodatabase.close()
+                    break // Fail-fast: found changes, no need to check others
+                } else {
+                    Logger.d(TAG, "Geodatabase ${service.name} has no local edits")
+                }
+
+                geodatabase.close()
+            }
+
+            Logger.i(TAG, "Unsaved changes check complete: hasChanges=$hasChanges")
+            Result.success(hasChanges)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error checking for unsaved changes", e)
+            Result.failure(e)
+        }
+    }
 }

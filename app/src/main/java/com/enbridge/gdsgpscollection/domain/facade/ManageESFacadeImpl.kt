@@ -6,6 +6,7 @@ import com.enbridge.gdsgpscollection.domain.entity.ESDataDownloadProgress
 import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
 import com.enbridge.gdsgpscollection.domain.entity.MultiServiceDownloadProgress
+import com.enbridge.gdsgpscollection.domain.usecase.CheckUnsyncedChangesUseCase
 import com.enbridge.gdsgpscollection.domain.usecase.DeleteJobCardsUseCase
 import com.enbridge.gdsgpscollection.domain.usecase.DownloadAllServicesUseCase
 import com.enbridge.gdsgpscollection.domain.usecase.DownloadESDataUseCase
@@ -42,6 +43,7 @@ import javax.inject.Singleton
  * @property deleteJobCardsUseCase Delete job cards
  * @property getSelectedDistanceUseCase Get distance preference
  * @property saveSelectedDistanceUseCase Save distance preference
+ * @property checkUnsyncedChangesUseCase Check for unsaved changes before destructive operations
  *
  * @author Sathya Narayanan
  * @since 1.0.0
@@ -56,7 +58,8 @@ class ManageESFacadeImpl @Inject constructor(
     private val getChangedDataUseCase: GetChangedDataUseCase,
     private val deleteJobCardsUseCase: DeleteJobCardsUseCase,
     private val getSelectedDistanceUseCase: GetSelectedDistanceUseCase,
-    private val saveSelectedDistanceUseCase: SaveSelectedDistanceUseCase
+    private val saveSelectedDistanceUseCase: SaveSelectedDistanceUseCase,
+    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase
 ) : ManageESFacade {
 
     companion object {
@@ -118,5 +121,12 @@ class ManageESFacadeImpl @Inject constructor(
     override suspend fun saveSelectedDistance(distance: ESDataDistance) {
         Logger.d(TAG, "saveSelectedDistance called - Distance: ${distance.displayText}")
         saveSelectedDistanceUseCase(distance)
+    }
+
+    // ========== SYNC CHECK METHOD IMPLEMENTATION ==========
+
+    override suspend fun hasUnsyncedChanges(): Result<Boolean> {
+        Logger.d(TAG, "hasUnsyncedChanges called - checking for local edits")
+        return checkUnsyncedChangesUseCase()
     }
 }

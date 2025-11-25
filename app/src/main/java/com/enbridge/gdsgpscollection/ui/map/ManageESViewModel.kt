@@ -753,6 +753,128 @@ class ManageESViewModel @Inject constructor(
         _uiState.update { it.copy(selectedJobCard = null) }
     }
 
+    /**
+     * Checks for unsaved changes before initiating download.
+     * Shows warning dialog if changes exist, requiring user to sync first.
+     *
+     * This method prevents data loss by detecting local edits before downloading
+     * new data which would overwrite the existing geodatabase.
+     *
+     * Flow:
+     * 1. Check for unsaved changes via facade
+     * 2. If changes exist: Show sync warning dialog
+     * 3. If no changes: Allow download to proceed
+     */
+    fun checkSyncBeforeDownload() {
+        Logger.i(TAG, "Checking for unsaved changes before download")
+
+        viewModelScope.launch {
+            val result = manageESFacade.hasUnsyncedChanges()
+
+            result.onSuccess { hasChanges ->
+                if (hasChanges) {
+                    Logger.w(TAG, "Unsaved changes detected - showing sync warning dialog")
+                    _uiState.update {
+                        it.copy(showSyncWarningBeforeDownload = true)
+                    }
+                } else {
+                    Logger.d(TAG, "No unsaved changes - user can proceed with download")
+                    // User can proceed with normal download flow
+                    // UI will call onGetDataClicked() after this check passes
+                }
+            }.onFailure { error ->
+                Logger.e(TAG, "Failed to check for unsaved changes", error)
+                _uiState.update {
+                    it.copy(
+                        downloadError = "Failed to check for unsaved changes: ${error.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Dismisses the sync warning dialog.
+     * User cancelled the sync operation.
+     */
+    fun onDismissSyncWarningDialog() {
+        Logger.d(TAG, "Sync warning dialog dismissed")
+        _uiState.update {
+            it.copy(
+                showSyncWarningBeforeDownload = false,
+                syncBeforeDownloadError = null
+            )
+        }
+    }
+
+    /**
+     * User confirmed to sync changes before download.
+     * Performs sync operation, then allows download to proceed.
+     *
+     * Sync Strategy:
+     * - Syncs all geodatabases (Wildfire: 1, Project: 2+)
+     * - Shows progress during sync
+     * - On success: Dismisses dialog, user can then download
+     * - On failure: Shows error, blocks download
+     */
+    fun onSyncBeforeDownload() {
+        Logger.i(TAG, "User confirmed sync before download")
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSyncingBeforeDownload = true,
+                    syncBeforeDownloadError = null
+                )
+            }
+
+            try {
+                // Sync all geodatabases
+                val syncResult = manageESFacade.syncAllServices()
+
+                syncResult.onSuccess { results ->
+                    val allSuccess = results.values.all { it }
+
+                    if (allSuccess) {
+                        Logger.i(TAG, "All geodatabases synced successfully")
+                        _uiState.update {
+                            it.copy(
+                                isSyncingBeforeDownload = false,
+                                showSyncWarningBeforeDownload = false
+                            )
+                        }
+                        // Download can now proceed - UI will handle the flow
+                    } else {
+                        val failedServices = results.filter { !it.value }.keys
+                        Logger.e(TAG, "Some geodatabases failed to sync: $failedServices")
+                        _uiState.update {
+                            it.copy(
+                                isSyncingBeforeDownload = false,
+                                syncBeforeDownloadError = "Failed to sync: ${failedServices.joinToString()}"
+                            )
+                        }
+                    }
+                }.onFailure { error ->
+                    Logger.e(TAG, "Sync failed before download", error)
+                    _uiState.update {
+                        it.copy(
+                            isSyncingBeforeDownload = false,
+                            syncBeforeDownloadError = error.message ?: "Sync failed"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Logger.e(TAG, "Unexpected error during sync", e)
+                _uiState.update {
+                    it.copy(
+                        isSyncingBeforeDownload = false,
+                        syncBeforeDownloadError = e.message ?: "Unknown error"
+                    )
+                }
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         Logger.d(TAG, "ManageESViewModel cleared")
@@ -763,6 +885,7 @@ class ManageESViewModel @Inject constructor(
  * UI State for Manage ES screen.
  *
  * Enhanced for multi-service support with separate fields for single and multi-service downloads.
+ * Includes sync warning state for data loss prevention.
  */
 data class ManageESUiState(
     // Distance selection - null indicates no selection
@@ -796,5 +919,10 @@ data class ManageESUiState(
     val isDeletingJobCards: Boolean = false,
     val deletedJobCardsCount: Int = 0,
     val showDeleteDialog: Boolean = false,
-    val deleteError: String? = null
+    val deleteError: String? = null,
+
+    // Sync warning state (data loss prevention)
+    val showSyncWarningBeforeDownload: Boolean = false,
+    val isSyncingBeforeDownload: Boolean = false,
+    val syncBeforeDownloadError: String? = null
 )

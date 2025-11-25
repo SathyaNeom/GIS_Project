@@ -60,6 +60,18 @@ accessibility, and maintainability.
   boundary for precise spatial control
 - **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
 
+### Data Loss Prevention
+
+- **Automatic Sync Check**: Detects unsaved changes before destructive operations (download, clear)
+- **Enhanced Warning Dialogs**: Different warning levels based on data state
+    - Standard warning for clean data
+    - Enhanced warning with explicit "DELETE" confirmation for unsaved changes
+- **Sync Before Download**: Option to sync unsaved changes before downloading new data
+- **Multi-Geodatabase Support**: Checks all geodatabases (Wildfire: 1, Project: 2+)
+- **Fail-Fast Detection**: Immediately warns user if any geodatabase has unsaved changes
+- **Clear User Feedback**: Progress indicators during sync operations
+- **Error Recovery**: Graceful handling of sync failures with detailed error messages
+
 ### Work Order Management
 
 - Job card listing with status indicators
@@ -593,6 +605,20 @@ When contributing to this project:
 - **Full Feature Downloads**: Complete feature geometries for intersecting features (no clipping)
   boundary for precise spatial control
 - **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
+
+### Data Loss Prevention (November 2025)
+
+- **Sync Check Architecture**: Multi-layer implementation across Domain, Data, and Presentation
+  layers
+- **ArcGIS SDK Integration**: Uses `Geodatabase.hasLocalEdits()` for accurate change detection
+- **Two-Tier Warning System**:
+    - Standard warning (DialogType.WARNING) for clean data
+    - Enhanced warning with "DELETE" confirmation for unsaved changes
+- **Sync-First Option**: Users can sync changes before downloading new data
+- **Environment-Aware**: Works with both Wildfire (single) and Project (multiple) geodatabases
+- **Use Case Implementation**: `CheckUnsyncedChangesUseCase` for business logic isolation
+- **Comprehensive Testing**: Unit, integration, and UI tests for all scenarios
+- **Detailed Documentation**: Complete implementation guide in ARCHITECTURE.md (Scenario 4)
 
 ### Release Readiness (November 2025)
 

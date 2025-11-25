@@ -148,6 +148,7 @@ fun MainMapScreen(
     val targetViewpoint by mainMapViewModel.targetViewpoint.collectAsStateWithLifecycle()
     val isRecreatingLayers by mainMapViewModel.isRecreatingLayers.collectAsStateWithLifecycle()
     val isLoadingLayers by mainMapViewModel.isLoadingLayers.collectAsStateWithLifecycle()
+    val hasUnsyncedChanges by mainMapViewModel.hasUnsyncedChanges.collectAsStateWithLifecycle()
 
     // Determine feature visibility
     val showJobCardEntry = appVariant == "electronic"
@@ -431,6 +432,8 @@ fun MainMapScreen(
                             screenState.setToolbarExpanded(false)
                         },
                         onClear = {
+                            // Check for unsaved changes before showing dialog
+                            mainMapViewModel.checkSyncBeforeClear()
                             screenState.showClearDialog()
                             screenState.setToolbarExpanded(false)
                         },
@@ -552,6 +555,7 @@ fun MainMapScreen(
             showFirstTimeGuidance = showFirstTimeGuidanceDialog,
             geodatabaseLoadError = geodatabaseLoadError,
             currentBasemap = screenState.interactionState.selectedBasemapStyle,
+            hasUnsyncedChanges = hasUnsyncedChanges, // NEW: Determines dialog type
             onLogout = onLogout,
             onClearData = {
                 mainMapViewModel.deleteGeodatabase()

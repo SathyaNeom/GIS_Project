@@ -18,6 +18,7 @@ import com.enbridge.gdsgpscollection.data.local.preferences.PreferencesManager
 import com.enbridge.gdsgpscollection.domain.config.LocationFeatureFlags
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.GeometryType
+import com.enbridge.gdsgpscollection.domain.usecase.CheckUnsyncedChangesUseCase
 import com.enbridge.gdsgpscollection.domain.usecase.GetSelectedDistanceUseCase
 import com.enbridge.gdsgpscollection.data.repository.GeodatabaseMigrationHelper
 import com.enbridge.gdsgpscollection.ui.map.delegates.BasemapManagerDelegate
@@ -109,6 +110,7 @@ class MainMapViewModel @Inject constructor(
     private val networkConnectivity: NetworkConnectivityDelegate,
     private val locationManager: LocationManagerDelegate,
     private val getSelectedDistanceUseCase: GetSelectedDistanceUseCase,
+    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase,
     private val featureFlags: LocationFeatureFlags,
     private val geodatabaseMigrationHelper: GeodatabaseMigrationHelper,
     private val preferencesManager: PreferencesManager
@@ -163,6 +165,16 @@ class MainMapViewModel @Inject constructor(
      * Used to prevent OSM toggle while loading is in progress.
      */
     val isLoadingLayers: StateFlow<Boolean> = layerManager.isLoadingLayers
+
+    /**
+     * StateFlow tracking whether geodatabase has unsaved changes.
+     * Used to enhance Clear dialog with appropriate warning level.
+     *
+     * When true: Shows enhanced warning requiring explicit "DELETE" confirmation
+     * When false: Shows standard warning with simple Yes/Cancel
+     */
+    private val _hasUnsyncedChanges = MutableStateFlow(false)
+    val hasUnsyncedChanges: StateFlow<Boolean> = _hasUnsyncedChanges.asStateFlow()
 
     companion object {
         private const val TAG = "MainMapViewModel"
@@ -722,6 +734,43 @@ class MainMapViewModel @Inject constructor(
             val newMap = basemapManager.updateBasemapStyle(basemapStyle, _map.value)
             _map.value = newMap
             Logger.d(TAG, "Updated basemap style to $basemapStyle")
+        }
+    }
+
+    /**
+     * Checks for unsaved changes before deletion.
+     * Updates the hasUnsyncedChanges state which determines dialog type.
+     *
+     * This method prevents data loss by detecting local edits before clearing
+     * the geodatabase. The UI will render an enhanced warning dialog if
+     * unsaved changes are detected.
+     *
+     * Flow:
+     * 1. Check for unsaved changes via use case
+     * 2. Update hasUnsyncedChanges state
+     * 3. UI shows appropriate dialog based on state:
+     *    - true: Enhanced warning with "DELETE" confirmation required
+     *    - false: Standard warning with Yes/Cancel
+     */
+    fun checkSyncBeforeClear() {
+        Logger.i(TAG, "Checking for unsaved changes before clear")
+
+        viewModelScope.launch {
+            val result = checkUnsyncedChangesUseCase()
+
+            result.onSuccess { hasChanges ->
+                if (hasChanges) {
+                    Logger.w(TAG, "Unsaved changes detected - will show enhanced warning")
+                    _hasUnsyncedChanges.value = true
+                } else {
+                    Logger.d(TAG, "No unsaved changes - standard clear dialog will be shown")
+                    _hasUnsyncedChanges.value = false
+                }
+            }.onFailure { error ->
+                Logger.e(TAG, "Failed to check for unsaved changes", error)
+                // Default to safe behavior: assume changes exist
+                _hasUnsyncedChanges.value = true
+            }
         }
     }
 

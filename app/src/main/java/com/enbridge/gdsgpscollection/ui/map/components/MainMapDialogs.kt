@@ -1,11 +1,23 @@
 package com.enbridge.gdsgpscollection.ui.map.components
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.arcgismaps.mapping.BasemapStyle
+import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppDialog
+import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextButton
 import com.enbridge.gdsgpscollection.designsystem.components.DialogType
 import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
@@ -66,6 +78,7 @@ fun MainMapDialogs(
     showFirstTimeGuidance: Boolean,
     geodatabaseLoadError: String?,
     currentBasemap: BasemapStyle,
+    hasUnsyncedChanges: Boolean, // NEW: Determines enhanced warning for Clear
     onLogout: () -> Unit,
     onClearData: () -> Unit,
     onDismissLogout: () -> Unit,
@@ -118,34 +131,46 @@ fun MainMapDialogs(
         )
     }
 
-    // Clear Data Confirmation Dialog
+    // Clear Data Confirmation Dialog (Enhanced based on unsaved changes)
     if (showClearDialog) {
-        AppDialog(
-            onDismissRequest = onDismissClear,
-            title = "Clear Data",
-            type = DialogType.INFO,
-            content = {
-                Text(
-                    text = "Are you sure you want to delete the geodatabase?",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            },
-            confirmButton = {
-                PrimaryButton(
-                    text = "Clear",
-                    onClick = {
-                        onClearData()
-                        onDismissClear()
-                    }
-                )
-            },
-            dismissButton = {
-                AppTextButton(
-                    text = "Cancel",
-                    onClick = onDismissClear
-                )
-            }
-        )
+        if (hasUnsyncedChanges) {
+            // Show enhanced warning with explicit "DELETE" confirmation
+            ClearWithUnsyncedChangesDialog(
+                onConfirmClear = {
+                    onClearData()
+                    onDismissClear()
+                },
+                onDismiss = onDismissClear
+            )
+        } else {
+            // Show standard warning dialog
+            AppDialog(
+                onDismissRequest = onDismissClear,
+                title = stringResource(R.string.dialog_clear_title),
+                type = DialogType.WARNING, // Changed from INFO to WARNING
+                content = {
+                    Text(
+                        text = stringResource(R.string.dialog_clear_message),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                },
+                confirmButton = {
+                    PrimaryButton(
+                        text = stringResource(R.string.action_clear),
+                        onClick = {
+                            onClearData()
+                            onDismissClear()
+                        }
+                    )
+                },
+                dismissButton = {
+                    AppTextButton(
+                        text = stringResource(R.string.action_cancel),
+                        onClick = onDismissClear
+                    )
+                }
+            )
+        }
     }
 
     // First-Time Guidance Dialog
@@ -189,4 +214,70 @@ fun MainMapDialogs(
             }
         )
     }
+}
+
+/**
+ * Enhanced clear dialog shown when unsaved changes exist.
+ * Requires explicit confirmation by typing "DELETE" to proceed.
+ *
+ * This dialog prevents accidental data loss by requiring users to
+ * explicitly acknowledge they understand the consequences of clearing
+ * geodatabase with unsaved changes.
+ *
+ * @param onConfirmClear Callback invoked when user confirms deletion
+ * @param onDismiss Callback invoked when user cancels
+ */
+@Composable
+private fun ClearWithUnsyncedChangesDialog(
+    onConfirmClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var confirmationText by remember { mutableStateOf("") }
+    val isConfirmed = confirmationText.equals("DELETE", ignoreCase = true)
+
+    AppDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.dialog_clear_unsaved_title),
+        type = DialogType.WARNING,
+        content = {
+            Column {
+                Text(
+                    text = stringResource(R.string.dialog_clear_unsaved_message),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Explicit confirmation field
+                AppTextField(
+                    value = confirmationText,
+                    onValueChange = { confirmationText = it },
+                    label = stringResource(R.string.dialog_clear_confirmation_label),
+                    placeholder = stringResource(R.string.dialog_clear_confirmation_hint),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.dialog_clear_confirmation_instruction),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        confirmButton = {
+            PrimaryButton(
+                text = stringResource(R.string.action_clear),
+                onClick = onConfirmClear,
+                enabled = isConfirmed // Only enable when "DELETE" is typed
+            )
+        },
+        dismissButton = {
+            AppTextButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss
+            )
+        }
+    )
 }

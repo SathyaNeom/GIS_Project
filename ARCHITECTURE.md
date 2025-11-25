@@ -2077,6 +2077,592 @@ class DownloadViewModel @Inject constructor(
 
 ---
 
+### Scenario 4: Data Loss Prevention - Sync Check Before Destructive Operations
+
+**Problem Statement:**
+
+Users may have unsaved changes (local edits) in their geodatabase. Performing destructive operations
+like downloading new data or clearing the geodatabase would result in permanent data loss without
+warning.
+
+**Solution: Multi-Layer Sync Check Architecture**
+
+This scenario demonstrates a complete implementation across all layers of Clean Architecture.
+
+---
+
+#### Domain Layer: Business Logic
+
+**Repository Interface (Contract):**
+
+```kotlin
+// domain/repository/ManageESRepository.kt
+interface ManageESRepository {
+    /**
+     * Checks if any geodatabase has local edits that need syncing.
+     * Works for both single-service (Wildfire) and multi-service (Project) environments.
+     *
+     * @return Result<Boolean> - true if unsaved changes exist
+     */
+    suspend fun hasUnsyncedChanges(): Result<Boolean>
+}
+```
+
+**Use Case (Business Rules):**
+
+```kotlin
+// domain/usecase/CheckUnsyncedChangesUseCase.kt
+class CheckUnsyncedChangesUseCase @Inject constructor(
+    private val repository: ManageESRepository
+) {
+    /**
+     * Checks for unsaved changes before destructive operations.
+     * Prevents data loss by warning users before:
+     * - Downloading new data (overwrites geodatabase)
+     * - Clearing geodatabase (deletes all local data)
+     */
+    suspend operator fun invoke(): Result<Boolean> {
+        Logger.d(TAG, "Executing CheckUnsyncedChangesUseCase")
+        return repository.hasUnsyncedChanges()
+    }
+}
+```
+
+**Facade Integration:**
+
+```kotlin
+// domain/facade/ManageESFacade.kt
+interface ManageESFacade {
+    suspend fun hasUnsyncedChanges(): Result<Boolean>
+    suspend fun syncAllServices(): Result<Map<String, Boolean>>
+}
+
+// domain/facade/ManageESFacadeImpl.kt
+class ManageESFacadeImpl @Inject constructor(
+    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase,
+    private val syncAllGeodatabasesUseCase: SyncAllGeodatabasesUseCase
+) : ManageESFacade {
+    
+    override suspend fun hasUnsyncedChanges(): Result<Boolean> {
+        return checkUnsyncedChangesUseCase()
+    }
+    
+    override suspend fun syncAllServices(): Result<Map<String, Boolean>> {
+        return syncAllGeodatabasesUseCase()
+    }
+}
+```
+
+---
+
+#### Data Layer: ArcGIS SDK Integration
+
+**Repository Implementation:**
+
+```kotlin
+// data/repository/ManageESRepositoryImpl.kt
+class ManageESRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val configuration: FeatureServiceConfiguration
+) : ManageESRepository {
+    
+    override suspend fun hasUnsyncedChanges(): Result<Boolean> {
+        return try {
+            Logger.i(TAG, "Checking for unsaved changes in geodatabase(s)")
+            
+            val environment = configuration.getCurrentEnvironment()
+            var hasChanges = false
+            
+            // Iterate through all configured services (Wildfire: 1, Project: 2+)
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+                
+                if (!geodatabaseFile.exists()) continue
+                
+                // Load geodatabase
+                val geodatabase = Geodatabase(servicePath)
+                geodatabase.load().onFailure { 
+                    geodatabase.close()
+                    continue 
+                }
+                
+                // CRITICAL: Check for local edits using ArcGIS SDK
+                if (geodatabase.hasLocalEdits()) {
+                    Logger.w(TAG, "Geodatabase ${service.name} has unsaved changes")
+                    hasChanges = true
+                    geodatabase.close()
+                    break // Fail-fast: found changes
+                }
+                
+                geodatabase.close()
+            }
+            
+            Logger.i(TAG, "Unsaved changes check complete: hasChanges=$hasChanges")
+            Result.success(hasChanges)
+            
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error checking for unsaved changes", e)
+            Result.failure(e)
+        }
+    }
+}
+```
+
+**Key Implementation Details:**
+
+1. **Environment-Aware**: Works with both Wildfire (1 geodatabase) and Project (2+ geodatabases)
+2. **Fail-Fast Strategy**: Returns true immediately upon finding first unsaved change
+3. **Resource Management**: Always closes geodatabase connections
+4. **Error Handling**: Logs errors but continues checking other geodatabases
+
+---
+
+#### Presentation Layer: ViewModel Logic
+
+**ManageESViewModel (Download Scenario):**
+
+```kotlin
+// ui/map/ManageESViewModel.kt
+@HiltViewModel
+class ManageESViewModel @Inject constructor(
+    private val manageESFacade: ManageESFacade
+) : ViewModel() {
+    
+    private val _uiState = MutableStateFlow(ManageESUiState())
+    val uiState: StateFlow<ManageESUiState> = _uiState.asStateFlow()
+    
+    /**
+     * Checks for unsaved changes before download.
+     * Shows warning dialog if changes exist.
+     */
+    fun checkSyncBeforeDownload() {
+        Logger.i(TAG, "Checking for unsaved changes before download")
+        
+        viewModelScope.launch {
+            val result = manageESFacade.hasUnsyncedChanges()
+            
+            result.onSuccess { hasChanges ->
+                if (hasChanges) {
+                    Logger.w(TAG, "Unsaved changes detected - showing warning")
+                    _uiState.update { 
+                        it.copy(showSyncWarningBeforeDownload = true) 
+                    }
+                } else {
+                    Logger.d(TAG, "No unsaved changes - safe to download")
+                }
+            }.onFailure { error ->
+                Logger.e(TAG, "Failed to check for unsaved changes", error)
+                _uiState.update {
+                    it.copy(downloadError = "Failed to check for unsaved changes")
+                }
+            }
+        }
+    }
+    
+    /**
+     * User confirmed to sync changes before download.
+     */
+    fun onSyncBeforeDownload() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncingBeforeDownload = true) }
+            
+            val syncResult = manageESFacade.syncAllServices()
+            
+            syncResult.onSuccess { results ->
+                val allSuccess = results.values.all { it }
+                if (allSuccess) {
+                    Logger.i(TAG, "All geodatabases synced successfully")
+                    _uiState.update { 
+                        it.copy(
+                            isSyncingBeforeDownload = false,
+                            showSyncWarningBeforeDownload = false
+                        ) 
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class ManageESUiState(
+    val showSyncWarningBeforeDownload: Boolean = false,
+    val isSyncingBeforeDownload: Boolean = false,
+    val syncBeforeDownloadError: String? = null
+)
+```
+
+**MainMapViewModel (Clear Scenario):**
+
+```kotlin
+// ui/map/MainMapViewModel.kt
+@HiltViewModel
+class MainMapViewModel @Inject constructor(
+    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase
+) : AndroidViewModel(application) {
+    
+    private val _hasUnsyncedChanges = MutableStateFlow(false)
+    val hasUnsyncedChanges: StateFlow<Boolean> = _hasUnsyncedChanges.asStateFlow()
+    
+    /**
+     * Checks for unsaved changes before clear.
+     * Updates state which determines dialog type (standard vs. enhanced).
+     */
+    fun checkSyncBeforeClear() {
+        Logger.i(TAG, "Checking for unsaved changes before clear")
+        
+        viewModelScope.launch {
+            val result = checkUnsyncedChangesUseCase()
+            
+            result.onSuccess { hasChanges ->
+                if (hasChanges) {
+                    Logger.w(TAG, "Unsaved changes detected - enhanced warning")
+                    _hasUnsyncedChanges.value = true
+                } else {
+                    Logger.d(TAG, "No unsaved changes - standard warning")
+                    _hasUnsyncedChanges.value = false
+                }
+            }.onFailure { error ->
+                Logger.e(TAG, "Failed to check, defaulting to safe behavior")
+                _hasUnsyncedChanges.value = true // Safe default
+            }
+        }
+    }
+    
+    fun deleteGeodatabase() {
+        // Only called after user confirms warning dialog
+        viewModelScope.launch {
+            // Delete geodatabase logic
+        }
+    }
+}
+```
+
+---
+
+#### UI Layer: Dialogs and User Interaction
+
+**Sync Warning Dialog (Download Scenario):**
+
+```kotlin
+// ui/map/components/ManageESBottomSheet.kt
+@Composable
+fun ManageESBottomSheet(
+    uiState: ManageESUiState,
+    viewModel: ManageESViewModel
+) {
+    // Sync Warning Dialog
+    if (uiState.showSyncWarningBeforeDownload) {
+        SyncBeforeDownloadDialog(
+            isSyncing = uiState.isSyncingBeforeDownload,
+            syncError = uiState.syncBeforeDownloadError,
+            onSyncAndContinue = viewModel::onSyncBeforeDownload,
+            onDismiss = viewModel::onDismissSyncWarningDialog
+        )
+    }
+}
+
+@Composable
+private fun SyncBeforeDownloadDialog(
+    isSyncing: Boolean,
+    syncError: String?,
+    onSyncAndContinue: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppDialog(
+        onDismissRequest = if (!isSyncing) onDismiss else {{}},
+        title = stringResource(R.string.dialog_sync_warning_title),
+        type = DialogType.WARNING,
+        content = {
+            when {
+                syncError != null -> {
+                    Text(text = syncError, color = MaterialTheme.colorScheme.error)
+                }
+                isSyncing -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(stringResource(R.string.sync_in_progress_message))
+                    }
+                }
+                else -> {
+                    Text(stringResource(R.string.dialog_sync_warning_message))
+                }
+            }
+        },
+        confirmButton = {
+            if (!isSyncing) {
+                PrimaryButton(
+                    text = stringResource(R.string.action_sync_and_continue),
+                    onClick = onSyncAndContinue
+                )
+            }
+        }
+    )
+}
+```
+
+**Enhanced Clear Dialog (Delete Scenario):**
+
+```kotlin
+// ui/map/components/MainMapDialogs.kt
+@Composable
+fun MainMapDialogs(
+    hasUnsyncedChanges: Boolean,
+    showClearDialog: Boolean,
+    onClearData: () -> Unit,
+    onDismissClear: () -> Unit
+) {
+    if (showClearDialog) {
+        if (hasUnsyncedChanges) {
+            // Enhanced warning with explicit "DELETE" confirmation
+            ClearWithUnsyncedChangesDialog(
+                onConfirmClear = {
+                    onClearData()
+                    onDismissClear()
+                },
+                onDismiss = onDismissClear
+            )
+        } else {
+            // Standard warning dialog
+            AppDialog(
+                title = stringResource(R.string.dialog_clear_title),
+                type = DialogType.WARNING,
+                content = {
+                    Text(stringResource(R.string.dialog_clear_message))
+                },
+                confirmButton = {
+                    PrimaryButton(
+                        text = stringResource(R.string.action_clear),
+                        onClick = {
+                            onClearData()
+                            onDismissClear()
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClearWithUnsyncedChangesDialog(
+    onConfirmClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var confirmationText by remember { mutableStateOf("") }
+    val isConfirmed = confirmationText.equals("DELETE", ignoreCase = true)
+    
+    AppDialog(
+        title = stringResource(R.string.dialog_clear_unsaved_title),
+        type = DialogType.WARNING,
+        content = {
+            Column {
+                Text(stringResource(R.string.dialog_clear_unsaved_message))
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Explicit confirmation field
+                AppTextField(
+                    value = confirmationText,
+                    onValueChange = { confirmationText = it },
+                    label = stringResource(R.string.dialog_clear_confirmation_label),
+                    placeholder = stringResource(R.string.dialog_clear_confirmation_hint)
+                )
+                
+                Text(
+                    text = stringResource(R.string.dialog_clear_confirmation_instruction),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        confirmButton = {
+            PrimaryButton(
+                text = stringResource(R.string.action_clear),
+                onClick = onConfirmClear,
+                enabled = isConfirmed // Only enable when "DELETE" is typed
+            )
+        }
+    )
+}
+```
+
+**User Interaction Flow:**
+
+```kotlin
+// ui/map/MainMapScreen.kt
+@Composable
+fun MainMapScreen(mainMapViewModel: MainMapViewModel) {
+    val hasUnsyncedChanges by mainMapViewModel.hasUnsyncedChanges.collectAsStateWithLifecycle()
+    
+    // Clear button handler
+    MapControlToolbar(
+        onClear = {
+            // Step 1: Check for unsaved changes
+            mainMapViewModel.checkSyncBeforeClear()
+            
+            // Step 2: Show dialog (type determined by hasUnsyncedChanges state)
+            screenState.showClearDialog()
+        }
+    )
+    
+    // Dialogs render based on state
+    MainMapDialogs(
+        hasUnsyncedChanges = hasUnsyncedChanges,
+        showClearDialog = screenState.dialogState.showClearDialog,
+        onClearData = { mainMapViewModel.deleteGeodatabase() },
+        onDismissClear = { screenState.dismissClearDialog() }
+    )
+}
+```
+
+---
+
+#### String Resources
+
+```xml
+<!-- app/src/main/res/values/strings.xml -->
+
+<!-- Sync Warning Dialogs -->
+<string name="dialog_sync_warning_title">Unsaved Changes Detected</string>
+<string name="dialog_sync_warning_message">You have unsaved changes that must be synced to the server before downloading new data.\n\nClick "Sync &amp; Continue" to upload your changes first.</string>
+
+<!-- Clear Data Dialogs -->
+<string name="dialog_clear_title">Clear Data</string>
+<string name="dialog_clear_message">This will delete all downloaded geodatabase files. Are you sure?</string>
+
+<string name="dialog_clear_unsaved_title">Warning: Unsaved Changes</string>
+<string name="dialog_clear_unsaved_message">You have unsaved changes that have not been synced to the server.\n\nClearing will permanently delete these changes.\n\nTo confirm deletion, type DELETE below:</string>
+
+<string name="dialog_clear_confirmation_label">Type DELETE to confirm</string>
+<string name="dialog_clear_confirmation_hint">DELETE</string>
+<string name="dialog_clear_confirmation_instruction">This action cannot be undone</string>
+
+<!-- Sync Actions -->
+<string name="action_sync_and_continue">Sync &amp; Continue</string>
+<string name="sync_in_progress_message">Syncing changes to server…</string>
+```
+
+---
+
+#### Architecture Benefits Demonstrated
+
+This implementation showcases several key architectural principles:
+
+**1. Separation of Concerns:**
+
+- Domain layer: Business logic (check for changes)
+- Data layer: ArcGIS SDK integration
+- Presentation layer: State management and UI orchestration
+- UI layer: User interaction and visual feedback
+
+**2. Dependency Inversion:**
+
+- ViewModel depends on domain abstractions (UseCase, Facade)
+- Repository implementation depends on domain interface
+- No circular dependencies
+
+**3. Single Responsibility:**
+
+- `CheckUnsyncedChangesUseCase`: Only checks for changes
+- `SyncAllGeodatabasesUseCase`: Only performs sync
+- Dialogs: Only handle user confirmation
+- ViewModels: Only orchestrate flow
+
+**4. Testability:**
+
+- UseCase can be tested with mock repository
+- ViewModel can be tested with mock facade
+- Repository can be tested with mock ArcGIS SDK
+- UI can be tested with mock ViewModel
+
+**5. Maintainability:**
+
+- Adding new destructive operations requires minimal changes
+- Sync logic centralized in one use case
+- Dialog reusable across features
+- Clear error handling at each layer
+
+**6. User Experience:**
+
+- Prevents accidental data loss
+- Clear warning messages
+- Explicit confirmation for dangerous operations
+- Progress feedback during sync
+- Graceful error recovery
+
+---
+
+#### Testing This Scenario
+
+**Unit Test: Use Case**
+
+```kotlin
+class CheckUnsyncedChangesUseCaseTest {
+    
+    @Test
+    fun `should return true when geodatabase has local edits`() = runTest {
+        // Arrange
+        val mockRepository = mockk<ManageESRepository>()
+        coEvery { mockRepository.hasUnsyncedChanges() } returns Result.success(true)
+        val useCase = CheckUnsyncedChangesUseCase(mockRepository)
+        
+        // Act
+        val result = useCase()
+        
+        // Assert
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrNull() == true)
+    }
+}
+```
+
+**Unit Test: ViewModel**
+
+```kotlin
+class ManageESViewModelTest {
+    
+    @Test
+    fun `checkSyncBeforeDownload should show dialog when changes exist`() = runTest {
+        // Arrange
+        val mockFacade = mockk<ManageESFacade>()
+        coEvery { mockFacade.hasUnsyncedChanges() } returns Result.success(true)
+        val viewModel = ManageESViewModel(mockFacade)
+        
+        // Act
+        viewModel.checkSyncBeforeDownload()
+        advanceUntilIdle()
+        
+        // Assert
+        assertTrue(viewModel.uiState.value.showSyncWarningBeforeDownload)
+    }
+}
+```
+
+**Integration Test: Repository**
+
+```kotlin
+@RunWith(AndroidJUnit4::class)
+class ManageESRepositoryImplTest {
+    
+    @Test
+    fun `hasUnsyncedChanges should return true for edited geodatabase`() = runTest {
+        // Arrange
+        val repository = ManageESRepositoryImpl(context, configuration)
+        createGeodatabaseWithEdits() // Test helper
+        
+        // Act
+        val result = repository.hasUnsyncedChanges()
+        
+        // Assert
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrNull() == true)
+    }
+}
+```
+
+---
+
 ## Testing Strategy
 
 ### Unit Testing

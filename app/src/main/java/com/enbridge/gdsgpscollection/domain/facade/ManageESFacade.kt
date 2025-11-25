@@ -161,4 +161,35 @@ interface ManageESFacade {
      * @param distance The distance setting to save
      */
     suspend fun saveSelectedDistance(distance: ESDataDistance)
+
+    // ========== SYNC CHECK METHODS (Data Loss Prevention) ==========
+
+    /**
+     * Checks if any geodatabase has unsaved changes that need syncing.
+     *
+     * This method is critical for preventing data loss before destructive operations:
+     * - Downloading new data (overwrites existing geodatabase)
+     * - Clearing geodatabase (deletes all local data)
+     *
+     * Works seamlessly across both environments:
+     * - Wildfire: Checks single geodatabase
+     * - Project: Checks all geodatabases (Operations + Basemap)
+     *
+     * Returns true if ANY geodatabase has unsaved changes, ensuring users are
+     * warned before potentially losing their work.
+     *
+     * @return Result<Boolean> - true if unsaved changes exist, false otherwise
+     *
+     * Example:
+     * ```kotlin
+     * hasUnsyncedChanges().onSuccess { hasChanges ->
+     *     if (hasChanges) {
+     *         showWarningDialog("You have unsaved changes. Sync before continuing?")
+     *     } else {
+     *         proceedWithOperation()
+     *     }
+     * }
+     * ```
+     */
+    suspend fun hasUnsyncedChanges(): Result<Boolean>
 }

@@ -246,4 +246,37 @@ interface ManageESRepository {
      * @param distance The distance to save
      */
     suspend fun saveSelectedDistance(distance: ESDataDistance)
+
+    // ========== SYNC CHECK METHODS (Data Loss Prevention) ==========
+
+    /**
+     * Checks if any geodatabase has local edits that need to be synced.
+     *
+     * This method prevents data loss by detecting unsaved changes before destructive operations:
+     * - Downloading new data (would overwrite existing geodatabase)
+     * - Clearing geodatabase (would delete unsaved edits)
+     *
+     * Works for both single-service (Wildfire) and multi-service (Project) environments.
+     * In multi-service environments, returns true if ANY geodatabase has unsaved changes.
+     *
+     * Implementation Strategy:
+     * - Iterates through all configured geodatabases
+     * - Calls `Geodatabase.hasLocalEdits()` on each
+     * - Returns true if ANY geodatabase has edits
+     * - Returns false only if ALL geodatabases are clean
+     *
+     * @return Result<Boolean> - true if unsaved changes exist, false otherwise
+     *
+     * Example:
+     * ```kotlin
+     * hasUnsyncedChanges().onSuccess { hasChanges ->
+     *     if (hasChanges) {
+     *         // Show warning dialog before destructive operation
+     *     } else {
+     *         // Safe to proceed
+     *     }
+     * }
+     * ```
+     */
+    suspend fun hasUnsyncedChanges(): Result<Boolean>
 }
