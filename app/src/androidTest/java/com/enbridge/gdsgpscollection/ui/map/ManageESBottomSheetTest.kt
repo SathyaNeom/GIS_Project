@@ -48,7 +48,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -67,7 +68,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -86,7 +88,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -105,7 +108,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -125,7 +129,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -148,7 +153,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -174,7 +180,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -194,7 +201,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = { dismissCalled = true },
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -216,7 +224,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -236,7 +245,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -267,7 +277,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }
@@ -287,7 +298,8 @@ class ManageESBottomSheetTest {
                 ManageESBottomSheet(
                     onDismissRequest = {},
                     onPostDataSnackbar = {},
-                    getCurrentMapExtent = { null }
+                    initialViewpoint = null,
+                    onRestoreViewpoint = {}
                 )
             }
         }

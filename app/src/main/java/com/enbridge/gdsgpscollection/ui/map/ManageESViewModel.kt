@@ -19,6 +19,7 @@ import com.enbridge.gdsgpscollection.domain.entity.GeodatabaseInfo
 import com.enbridge.gdsgpscollection.domain.entity.JobCard
 import com.enbridge.gdsgpscollection.domain.entity.MultiServiceDownloadProgress
 import com.enbridge.gdsgpscollection.domain.facade.ManageESFacade
+import com.enbridge.gdsgpscollection.ui.map.delegates.ExtentManagerDelegate
 import com.enbridge.gdsgpscollection.ui.map.delegates.LocationManagerDelegate
 import com.enbridge.gdsgpscollection.util.Logger
 import com.enbridge.gdsgpscollection.util.network.NetworkMonitor
@@ -50,6 +51,7 @@ import javax.inject.Inject
  * @property networkMonitor Network connectivity monitor for auto-clearing network errors
  * @property locationFeatureFlags Feature flags controlling location behavior (dev/prod)
  * @property locationManager Location manager providing current location and availability
+ * @property extentManager Extent manager for calculating download extents based on distance
  *
  * @author Sathya Narayanan
  * @since 1.0.0
@@ -60,7 +62,8 @@ class ManageESViewModel @Inject constructor(
     private val configuration: FeatureServiceConfiguration,
     private val networkMonitor: NetworkMonitor,
     private val locationFeatureFlags: LocationFeatureFlags,
-    private val locationManager: LocationManagerDelegate
+    private val locationManager: LocationManagerDelegate,
+    private val extentManager: ExtentManagerDelegate
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ManageESUiState())
@@ -192,21 +195,31 @@ class ManageESViewModel @Inject constructor(
      * Handles "Get Data" button click - automatically selects single or multi-service download
      * based on current environment configuration.
      *
+     * Calculates the download extent based on the selected distance and center point,
+     * ensuring features are limited to a buffered area around the user's location.
+     *
      * Marks the extent change as committed, preventing viewpoint restoration on dismiss.
      *
      * Environment Routing:
      * - Project Environment: Calls onGetDataMultiService() for parallel downloads
      * - Wildfire Environment: Calls onGetDataSingleService() for legacy download
      *
-     * @param extent Geographic extent to download data for
+     * @param selectedDistance The distance radius for the download extent buffer
+     * @param centerPoint Center point for the extent (typically user's current location)
      * @param onGeodatabasesDownloaded Callback with list of downloaded geodatabases
      * @param onSaveTimestamp Callback to save download timestamp
      */
     fun onGetDataClicked(
-        extent: Envelope,
+        selectedDistance: ESDataDistance,
+        centerPoint: Point,
         onGeodatabasesDownloaded: (List<GeodatabaseInfo>) -> Unit = {},
         onSaveTimestamp: () -> Unit = {}
     ) {
+        Logger.i(
+            TAG,
+            "onGetDataClicked called with distance=${selectedDistance.displayText}, centerPoint=(${centerPoint.x.toInt()}, ${centerPoint.y.toInt()})"
+        )
+
         if (!isGetDataEnabled.value) {
             Logger.w(TAG, "Get Data clicked but button is not enabled; ignoring request")
             return
@@ -216,18 +229,42 @@ class ManageESViewModel @Inject constructor(
         _isExtentCommitted.value = true
         Logger.d(TAG, "Map extent change committed via Get Data action")
 
-        val environment = configuration.getCurrentEnvironment()
-        val isMultiService = environment.featureServices.size > 1
+        viewModelScope.launch {
+            Logger.d(
+                TAG,
+                "Calculating extent for distance=${selectedDistance.displayText}, centerPoint=(${centerPoint.x}, ${centerPoint.y})"
+            )
 
-        Logger.i(
-            TAG,
-            "Get Data clicked - Environment: ${if (isMultiService) "Multi-Service" else "Single-Service"}"
-        )
+            // Calculate extent based on distance and center point
+            val extent = extentManager.calculateExtentForDistance(selectedDistance, centerPoint)
 
-        if (isMultiService) {
-            onGetDataMultiService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
-        } else {
-            onGetDataSingleService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
+            if (extent == null) {
+                Logger.e(TAG, "Failed to calculate extent for download")
+                _uiState.update {
+                    it.copy(downloadError = "Failed to calculate download extent. Please try again.")
+                }
+                return@launch
+            }
+
+            Logger.i(
+                TAG,
+                "Calculated download extent: width=${extent.width.toInt()}m, height=${extent.height.toInt()}m, " +
+                        "xMin=${extent.xMin.toInt()}, yMin=${extent.yMin.toInt()}, xMax=${extent.xMax.toInt()}, yMax=${extent.yMax.toInt()}"
+            )
+
+            val environment = configuration.getCurrentEnvironment()
+            val isMultiService = environment.featureServices.size > 1
+
+            Logger.i(
+                TAG,
+                "Get Data clicked - Environment: ${if (isMultiService) "Multi-Service" else "Single-Service"}"
+            )
+
+            if (isMultiService) {
+                onGetDataMultiService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
+            } else {
+                onGetDataSingleService(extent, onGeodatabasesDownloaded, onSaveTimestamp)
+            }
         }
     }
 
@@ -656,6 +693,33 @@ class ManageESViewModel @Inject constructor(
                 postError = null,
                 deleteError = null
             )
+        }
+    }
+
+    /**
+     * Clears download state when bottom sheet is opened without active geodatabase.
+     * Prevents showing stale success messages from previous downloads.
+     *
+     * This should be called when:
+     * - Bottom sheet opens and no geodatabase is loaded
+     * - Geodatabase was cleared but bottom sheet wasn't open during deletion
+     *
+     * @param hasGeodatabase Whether a geodatabase is currently loaded
+     */
+    fun onBottomSheetOpened(hasGeodatabase: Boolean) {
+        if (!hasGeodatabase) {
+            Logger.d(TAG, "Bottom sheet opened without geodatabase - clearing download state")
+            _uiState.update {
+                it.copy(
+                    isDownloading = false,
+                    downloadProgress = 0f,
+                    downloadMessage = "",
+                    isDownloadInProgress = false,
+                    multiServiceProgress = null
+                )
+            }
+        } else {
+            Logger.d(TAG, "Bottom sheet opened with geodatabase present - preserving state")
         }
     }
 

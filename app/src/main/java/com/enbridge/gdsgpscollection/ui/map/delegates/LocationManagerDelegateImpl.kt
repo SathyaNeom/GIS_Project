@@ -203,7 +203,7 @@ class LocationManagerDelegateImpl @Inject constructor(
      */
     override fun createLocationDataSource(): LocationDataSource? {
         return if (featureFlags.useSimulatedLocation) {
-            Logger.d(TAG, "Creating simulated location data source (Development Mode)")
+//            Logger.d(TAG, "Creating simulated location data source (Development Mode)")
             createSimulatedLocationDataSource()
         } else {
             Logger.d(TAG, "Using default system location data source (Production Mode)")
@@ -250,7 +250,7 @@ class LocationManagerDelegateImpl @Inject constructor(
         )
 
         return SimulatedLocationDataSource(locationPolyline, simulationParameters).also {
-            Logger.i(TAG, "Simulated location data source created successfully")
+//            Logger.i(TAG, "Simulated location data source created successfully")
         }
     }
 
@@ -294,9 +294,9 @@ class LocationManagerDelegateImpl @Inject constructor(
     override fun updateCurrentLocation(location: Point?) {
         _currentLocation.value = location
         if (location != null) {
-            Logger.v(TAG, "Current location updated: (${location.x}, ${location.y})")
+//            Logger.v(TAG, "Current location updated: (${location.x}, ${location.y})")
         } else {
-            Logger.v(TAG, "Current location cleared (null)")
+//            Logger.v(TAG, "Current location cleared (null)")
         }
     }
 }

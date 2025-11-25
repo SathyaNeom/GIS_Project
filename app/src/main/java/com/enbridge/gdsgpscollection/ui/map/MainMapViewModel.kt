@@ -60,23 +60,43 @@ data class GeodatabaseMetadata(
 )
 
 /**
- * MainMapViewModel - Refactored using Delegation Pattern
+ * MainMapViewModel - Orchestrates map functionality through specialized delegates.
  *
- * This ViewModel now orchestrates map functionality through specialized delegates,
- * following the Single Responsibility Principle. Each delegate handles a specific
- * concern:
+ * This ViewModel coordinates map operations using the Delegation Pattern for separation of concerns.
+ * Each delegate handles a specific responsibility:
  *
- * - LayerManagerDelegate: Layer visibility and management
- * - BasemapManagerDelegate: Basemap style and OSM visibility
- * - GeodatabaseManagerDelegate: Geodatabase lifecycle
- * - ExtentManagerDelegate: Map extent restrictions
- * - NetworkConnectivityDelegate: Network state monitoring
- * - LocationManagerDelegate: Location display and management
+ * - LayerManagerDelegate: Layer visibility, TOC filtering, and metadata management
+ * - BasemapManagerDelegate: Basemap style selection and OSM layer visibility
+ * - GeodatabaseManagerDelegate: Geodatabase lifecycle and persistence
+ * - ExtentManagerDelegate: Viewpoint calculation for distance-based extent visualization
+ * - NetworkConnectivityDelegate: Network state monitoring for offline awareness
+ * - LocationManagerDelegate: Location display and user position tracking
  *
- * Benefits of this refactoring:
- * - Better testability: Each delegate can be tested independently
- * - Clear separation of concerns: Each class has one reason to change
- * - Easier maintenance: Changes to one feature don't affect others
+ * Spatial Filtering Architecture:
+ * Feature visibility is controlled through geodatabase download extent. When a user downloads
+ * data with a selected distance (e.g., 500 meters), only features within that geographic extent
+ * are included in the offline geodatabase. Features outside the extent do not exist locally,
+ * providing natural spatial filtering without runtime processing.
+ *
+ * Additional filtering is available through the Table of Contents (TOC), which applies
+ * attribute-based filters using SQL WHERE clauses on the loaded geodatabase layers.
+ *
+ * Benefits of this architecture:
+ * - Single Responsibility: Each delegate has one clear purpose
+ * - Testability: Delegates can be tested independently with mocks
+ * - Maintainability: Changes to one feature domain do not affect others
+ * - Clarity: Feature implementation is localized within its delegate
+ *
+ * @property application Application context for file system operations
+ * @property layerManager Manages feature layer visibility and attribute filtering
+ * @property basemapManager Manages basemap styles and OSM layer visibility
+ * @property geodatabaseManager Manages geodatabase loading, persistence, and metadata
+ * @property extentManager Calculates viewpoints for distance-based extent display
+ * @property networkConnectivity Monitors network state for offline mode awareness
+ * @property locationManager Manages location display and user position
+ * @property getSelectedDistanceUseCase Retrieves persisted distance preference
+ * @property featureFlags Configuration flags for location behavior (dev/prod modes)
+ * @property geodatabaseMigrationHelper Handles backward compatibility for data migration
  */
 @HiltViewModel
 class MainMapViewModel @Inject constructor(
@@ -188,13 +208,18 @@ class MainMapViewModel @Inject constructor(
     }
 
     /**
-     * Updates the map's maximum extent based on the selected distance and emits
+     * Updates the map's viewpoint based on the selected distance and emits
      * a target viewpoint for the UI layer to animate to.
      *
      * This method coordinates with the ExtentManagerDelegate to:
-     * 1. Set the map's maxExtent constraint
-     * 2. Calculate an appropriate viewpoint with padding
-     * 3. Emit the viewpoint via StateFlow for the UI to observe
+     * 1. Calculate an appropriate viewpoint with padding
+     * 2. Emit the viewpoint via StateFlow for the UI to observe
+     *
+     * IMPORTANT: This method does NOT restrict map panning. Users can freely
+     * navigate the entire map. The distance selection affects only:
+     * - Geodatabase download scope (what data to fetch)
+     * - Layer display filtering (what features to show)
+     * - Visual boundary indicator (circle overlay)
      *
      * The emitted viewpoint ensures the map zooms to display the selected distance
      * area, providing consistent behavior whether zooming in or out.
@@ -203,7 +228,7 @@ class MainMapViewModel @Inject constructor(
      */
     fun updateMaxExtent(distance: ESDataDistance) {
         viewModelScope.launch {
-            val viewpoint = extentManager.updateMaxExtent(
+            val viewpoint = extentManager.calculateViewpointForDistance(
                 distance,
                 _map.value,
                 locationManager.currentLocation.value
@@ -696,7 +721,7 @@ class MainMapViewModel @Inject constructor(
             // This ensures Compose detects the change and triggers recomposition
             val newMap = ArcGISMap(basemapManager.currentBasemapStyle).apply {
                 initialViewpoint = currentViewpoint
-                maxExtent = null // Clear extent restriction
+                // Note: maxExtent is not used - map panning is unrestricted
                 // Intentionally not adding any operational layers - geodatabase is being deleted
             }
 
@@ -704,9 +729,6 @@ class MainMapViewModel @Inject constructor(
 
             // Update map StateFlow - this triggers MapView recomposition
             _map.value = newMap
-
-            // Reset maxExtent to null (already done in map creation above)
-            _map.value.maxExtent = null
 
             // Delegate geodatabase deletion to GeodatabaseManagerDelegate
             // This closes file handles and deletes the physical file

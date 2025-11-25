@@ -185,6 +185,14 @@
     <string name="managees_title">Get data or Post Data</string>
     <string name="managees_subtitle">Get Data - Select a Distance around where you are standing</string>
     <string name="managees_distance">Distance</string>
+    <string name="managees_get_data_or_post_data">Get data or Post Data</string>
+    <string name="managees_get_data_description">Get Data - Select a Distance around where you are standing</string>
+    <string name="managees_delete_job_card_info">Delete Job Card Info</string>
+    <string name="managees_no_job_card_saved">No Job Card has been saved</string>
+    <string name="managees_deleted_job_cards">%1$d Job Card(s) deleted successfully</string>
+    <string name="managees_location_unavailable">Location unavailable</string>
+    <string name="managees_grant_location_permission">Grant location permission</string>
+    <string name="managees_check_location_enabled">Check location is enabled</string>
     <string name="managees_distance_placeholder">Select distance</string>
     <string name="managees_get_data">Get Data</string>
     <string name="managees_data_changed">Data Changed:</string>
@@ -646,4 +654,29 @@
     <string name="msg_loading_layers">Loading layers…</string>
 
     <!-- Layer Display Status -->
+
+    <!-- Viewport Filter (Distance-based Filtering) -->
+    <string name="filter_boundary_label">%1$s radius</string>
+    <string name="filter_feature_count">%1$d features</string>
+    <string name="filter_feature_count_plural">%1$d features visible</string>
+    <string name="filter_no_features">No features in view</string>
+    <string name="action_toggle_boundary">Toggle filter boundary</string>
+    <string name="action_show_boundary">Show boundary</string>
+    <string name="action_hide_boundary">Hide boundary</string>
+    <string name="cd_filter_boundary_visible">Filter boundary visible</string>
+    <string name="cd_filter_boundary_hidden">Filter boundary hidden</string>
+
+    <!-- Re-download Prompts -->
+    <string name="msg_filter_distance_increased">Showing features within %1$s (previously downloaded).\nTap \"Get Data\" to download additional features up to %2$s.</string>
+    <string name="msg_filter_applied">Filter updated to %1$s radius</string>
+    <string name="msg_filter_enabled">Viewport filter enabled</string>
+    <string name="msg_filter_disabled">Viewport filter disabled</string>
+    <string name="msg_calculating_filters">Calculating feature filters…</string>
+    <string name="msg_no_features_in_area">No features within selected distance from current location</string>
+
+    <!-- Filter Status -->
+    <string name="filter_status_active">Filtering: %1$s</string>
+    <string name="filter_status_inactive">Filter inactive</string>
+    <string name="filter_center_viewport">Filter center: Viewport</string>
+    <string name="filter_center_location">Filter center: Your location</string>
 </resources>

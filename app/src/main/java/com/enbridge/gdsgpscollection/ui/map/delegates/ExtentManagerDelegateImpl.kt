@@ -14,9 +14,15 @@ import javax.inject.Singleton
 /**
  * Implementation of ExtentManagerDelegate.
  *
- * Manages map extent restrictions and viewpoint calculations based on distance buffers.
+ * Manages map extent calculations and viewpoint generation based on distance buffers.
  * This implementation ensures consistent zoom behavior when users change the distance
  * selection, whether zooming in to a smaller area or zooming out to a larger area.
+ *
+ * IMPORTANT: This implementation does NOT restrict map panning. Users can freely
+ * navigate the entire map. The distance-based extent is used only for:
+ * - Calculating appropriate zoom viewpoints
+ * - Determining geodatabase download scope
+ * - Defining spatial filter boundaries for layer display
  *
  * @author Sathya Narayanan
  */
@@ -35,20 +41,22 @@ class ExtentManagerDelegateImpl @Inject constructor() : ExtentManagerDelegate {
     }
 
     /**
-     * Updates the map's maximum extent and calculates the appropriate viewpoint
-     * to display the distance buffer area.
+     * Calculates the appropriate viewpoint to display the distance buffer area
+     * without restricting map panning.
      *
-     * This method addresses a common issue where changing from a smaller to larger
-     * distance does not zoom out the map. By returning a viewpoint, the UI layer
-     * can explicitly animate the map to show the entire extent area, ensuring
-     * consistent zoom behavior in both directions (zoom in and zoom out).
+     * This method addresses the requirement for free map navigation while still
+     * providing visual context for the download/filter extent. By returning a
+     * viewpoint without setting maxExtent, the UI layer can animate to show the
+     * relevant area without preventing users from panning elsewhere.
      *
      * Implementation Details:
      * 1. Determines center point using fallback chain: provided → map center → San Francisco
      * 2. Creates a geodetic buffer around the center point based on the distance
-     * 3. Sets the map's maxExtent to restrict panning within the buffer area
-     * 4. Calculates a viewpoint with padding to provide visual context
-     * 5. Returns the viewpoint for the UI layer to apply with animation
+     * 3. Calculates a viewpoint with padding to provide visual context
+     * 4. Returns the viewpoint for the UI layer to apply with animation
+     *
+     * NOTE: Unlike the previous implementation, this method does NOT call
+     * map.maxExtent = extent. Map panning is completely unrestricted.
      *
      * Center Point Fallback Chain:
      * - Primary: User's current location (if provided via centerPoint parameter)
@@ -56,11 +64,11 @@ class ExtentManagerDelegateImpl @Inject constructor() : ExtentManagerDelegate {
      * - Tertiary: San Francisco default (fail-safe for edge cases)
      *
      * @param distance The distance radius for the extent buffer
-     * @param map The ArcGIS map instance to update
+     * @param map The ArcGIS map instance (used only for center point fallback)
      * @param centerPoint Optional center point (typically user's location) for centering the extent
      * @return A Viewpoint encompassing the extent with padding, or null if calculation fails
      */
-    override suspend fun updateMaxExtent(
+    override suspend fun calculateViewpointForDistance(
         distance: ESDataDistance,
         map: ArcGISMap,
         centerPoint: Point?
@@ -111,9 +119,12 @@ class ExtentManagerDelegateImpl @Inject constructor() : ExtentManagerDelegate {
 
             val extent = bufferedGeometry?.extent
             if (extent != null) {
-                // Update the map's maximum extent constraint
-                // This restricts panning to keep the map within the buffer area
-                map.maxExtent = extent
+                // CRITICAL CHANGE: Do NOT set map.maxExtent
+                // Users can now freely pan outside the calculated extent
+                // The extent is used only for:
+                // 1. Viewpoint calculation (visual feedback)
+                // 2. Geodatabase download scope (data fetching)
+                // 3. Layer display filtering (feature visibility)
 
                 // Calculate expanded extent with padding for better visual context
                 // We expand the extent by 20% (EXTENT_PADDING_FACTOR) to provide breathing room
@@ -134,8 +145,8 @@ class ExtentManagerDelegateImpl @Inject constructor() : ExtentManagerDelegate {
 
                 Logger.d(
                     TAG,
-                    "Updated maxExtent and calculated viewpoint for ${distance.displayText} " +
-                            "with ${EXTENT_PADDING_FACTOR}x padding"
+                    "Calculated viewpoint for ${distance.displayText} with ${EXTENT_PADDING_FACTOR}x padding " +
+                            "(map panning unrestricted)"
                 )
 
                 return viewpoint
@@ -144,9 +155,56 @@ class ExtentManagerDelegateImpl @Inject constructor() : ExtentManagerDelegate {
                 return null
             }
         } catch (e: Exception) {
-            Logger.e(TAG, "Error updating maxExtent and calculating viewpoint", e)
+            Logger.e(TAG, "Error calculating viewpoint for distance", e)
             return null
         }
     }
 
+    /**
+     * Calculates the extent (Envelope) for the given distance and center point.
+     * This extent is used for geodatabase download parameters.
+     *
+     * Unlike calculateViewpointForDistance, this method returns the raw extent
+     * without padding, suitable for use in GeodatabaseSyncTask parameters.
+     *
+     * @param distance The distance radius for the extent buffer
+     * @param centerPoint Center point for the buffer
+     * @return Envelope representing the buffered area, or null if calculation fails
+     */
+    override suspend fun calculateExtentForDistance(
+        distance: ESDataDistance,
+        centerPoint: Point
+    ): com.arcgismaps.geometry.Envelope? {
+        return try {
+            Logger.d(TAG, "Calculating extent for ${distance.displayText}")
+
+            // Create geodetic buffer around the center point
+            val bufferedGeometry = GeometryEngine.bufferGeodeticOrNull(
+                geometry = centerPoint,
+                distance = distance.meters.toDouble(),
+                distanceUnit = com.arcgismaps.geometry.LinearUnit(
+                    com.arcgismaps.geometry.LinearUnitId.Meters
+                ),
+                maxDeviation = Double.NaN,
+                curveType = com.arcgismaps.geometry.GeodeticCurveType.Geodesic
+            )
+
+            val extent = bufferedGeometry?.extent
+
+            if (extent != null) {
+                Logger.d(
+                    TAG,
+                    "Successfully calculated extent for ${distance.displayText}: " +
+                            "width=${extent.width.toInt()}m, height=${extent.height.toInt()}m"
+                )
+            } else {
+                Logger.w(TAG, "Failed to create extent for distance: ${distance.displayText}")
+            }
+
+            extent
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error calculating extent for distance", e)
+            null
+        }
+    }
 }

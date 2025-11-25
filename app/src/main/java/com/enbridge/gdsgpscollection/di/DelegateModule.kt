@@ -26,8 +26,17 @@ import javax.inject.Singleton
 /**
  * Hilt module for providing delegate implementations.
  *
- * This module binds all delegate interfaces to their concrete implementations
- * as singletons, following the delegation pattern for MainMapViewModel refactoring.
+ * This module binds delegate interfaces to their concrete implementations, following the
+ * Delegation Pattern for MainMapViewModel architecture. All delegates are scoped as singletons
+ * within the SingletonComponent lifecycle.
+ *
+ * Delegates provided by this module:
+ * - LayerManagerDelegate: Layer visibility and attribute-based filtering
+ * - BasemapManagerDelegate: Basemap style and OSM layer management
+ * - GeodatabaseManagerDelegate: Geodatabase lifecycle and persistence
+ * - ExtentManagerDelegate: Viewpoint calculation for extent visualization
+ * - NetworkConnectivityDelegate: Network state monitoring for offline awareness
+ * - LocationManagerDelegate: Location display and position tracking
  *
  * @author Sathya Narayanan
  */

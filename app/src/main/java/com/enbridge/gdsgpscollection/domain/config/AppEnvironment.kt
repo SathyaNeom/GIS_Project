@@ -59,7 +59,7 @@ sealed class AppEnvironment {
      *
      * This environment serves as the fallback when project services are unavailable.
      * It uses Esri's publicly accessible Wildfire sync sample service, which allows
-     * development and testing without VPN or internal network access.
+     * development and testing without VPN or CA Certificate or internal network access.
      *
      * Use Case:
      * - Working remotely without VPN access

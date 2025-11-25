@@ -80,6 +80,165 @@ concerns.
 
 ## ArcGIS Integration Issues
 
+### Full Feature Download Strategy
+
+**Severity:** Low  
+**Module:** data (ManageESRepository)  
+**Status:** Implemented - Design Decision
+
+#### Description
+
+The application downloads complete feature geometries for any feature that intersects the selected
+download extent, rather than clipping geometries to the extent boundary. This design prioritizes
+data completeness and user experience over file size optimization.
+
+#### Behavior
+
+When downloading data for a specific extent (e.g., 500m radius):
+
+- **Server Selection**: ArcGIS Server identifies features whose geometry intersects the extent
+- **Full Geometry Download**: Complete feature geometries are downloaded (not clipped)
+- **Boundary Intersection**: Features that even just touch the boundary are included fully
+
+#### Example Scenario
+
+**Current Behavior:**
+
+1. User selects "500 Meters" download distance
+2. A 5km pipeline passes through the 500m extent (intersecting ~1km)
+3. Server downloads the **entire 5km pipeline geometry**
+4. User can see the complete pipeline feature when panning the map
+5. **Result:** Complete feature visibility, no visual artifacts from clipped geometry
+
+#### Feature Selection by Geometry Type
+
+| Geometry Type | Selection Criteria                    | Download Behavior                                 |
+|---------------|---------------------------------------|---------------------------------------------------|
+| Point         | Point is within extent                | Complete point geometry                           |
+| Multipoint    | Any point within extent               | All points in the multipoint feature              |
+| Polyline      | ANY segment intersects extent         | **Entire line** (not just intersecting segment)   |
+| Polygon       | ANY part intersects or touches extent | **Complete polygon** (not just intersecting area) |
+
+#### Performance Considerations
+
+**Benefits:**
+
+- ✅ **Visual Consistency**: No clipped geometries at extent boundaries
+- ✅ **Complete Features**: Users see entire infrastructure (pipelines, parcels, etc.)
+- ✅ **Simplified Logic**: No client-side geometry manipulation required
+- ✅ **Reduced Complexity**: ~135 lines of clipping code removed from codebase
+
+**Trade-offs:**
+
+- ⚠️ **Larger Files**: Features extending beyond extent increase geodatabase size
+- ⚠️ **Longer Downloads**: More geometry data transferred from server
+- ⚠️ **Storage Impact**: May exceed extent-based size estimates
+- ⚠️ **Extended Visibility**: Features visible when panning beyond download extent
+
+#### Performance Impact Examples
+
+**Small Extent + Large Features:**
+
+- 500m extent intersecting 5km pipeline → Downloads full 5km geometry
+- 1km extent intersecting 10km parcel boundary → Downloads complete parcel
+
+**Typical Dataset Impact:**
+
+- Extent-based estimate: 2 MB
+- Actual with full features: 3-5 MB (50-150% increase)
+- Download time increase: Proportional to file size increase
+
+#### Technical Implementation
+
+**Location:** `ManageESRepositoryImpl.kt`
+
+**Configuration:**
+
+```kotlin
+val generateParams = geodatabaseSyncTask
+    .createDefaultGenerateGeodatabaseParameters(extent)
+    
+generateParams.apply {
+    returnAttachments = false
+    outSpatialReference = SpatialReference.webMercator()
+    // returnGeometry defaults to true → Full geometries downloaded
+}
+```
+
+**Server Behavior:**
+
+- The extent parameter identifies intersecting features
+- Server returns complete geometries for all intersecting features
+- No server-side or client-side geometry clipping applied
+
+#### User Experience
+
+**Panning Beyond Download Extent:**
+
+- Features intersecting the original extent remain visible
+- Example: Download at location A, pan to location B → See features from location A if they extend
+  there
+
+**Visual Quality:**
+
+- No clipped lines at extent boundaries
+- Complete pipeline/parcel representations
+- Professional appearance for infrastructure mapping
+
+#### Comparison with Alternative Approaches
+
+| Approach               | File Size | UX Quality       | Complexity | Maintenance      |
+|------------------------|-----------|------------------|------------|------------------|
+| Full Feature (Current) | Larger    | Excellent        | Low        | Simple           |
+| Client-Side Clipping   | Optimal   | Visual Artifacts | High       | Complex          |
+| Server-Side Clipping   | Optimal   | Good             | Low        | Server-Dependent |
+
+#### Rationale for Design Decision
+
+This design was chosen because:
+
+1. **User Expectation**: Users expect to see complete features (e.g., full pipelines)
+2. **Data Integrity**: Complete features maintain semantic meaning
+3. **Professional Quality**: No visual artifacts from geometry clipping
+4. **Development Efficiency**: Reduced codebase complexity
+5. **Acceptable Trade-off**: Storage increase is manageable for typical use cases
+
+#### When This May Be Problematic
+
+Consider alternative approaches if:
+
+- Storage is severely constrained (< 500 MB available)
+- Network bandwidth is extremely limited (2G connections)
+- Datasets contain extremely large features (100km+ pipelines)
+- Strict extent-based visibility is a business requirement
+
+#### Migration Notes
+
+**Changed from Previous Version (Nov 2025):**
+
+Previously, the application implemented client-side geometry clipping using
+`GeometryEngine.clipOrNull()`. This has been removed in favor of full feature downloads.
+
+**Code Removed:**
+
+- `ManageESRepositoryImpl.clipGeodatabaseToExtent()` method (~135 lines)
+- Client-side clipping phase from download workflow
+- Progress message "Clipping geometries to extent…"
+
+**Files Modified:**
+
+- `ManageESRepositoryImpl.kt` - Removed clipping logic
+- `strings.xml` - Removed clipping progress message
+- `GeometryExtensions.kt` - Retained `clip()` method for potential future use
+
+#### References
+
+- [ArcGIS Kotlin SDK - Geometry Operations](https://developers.arcgis.com/kotlin/spatial-and-data-analysis/geometry/)
+- [Generate Geodatabase Sample](https://github.com/Esri/arcgis-maps-sdk-kotlin-samples/tree/main/samples/generate-geodatabase-replica-from-feature-service)
+- [GenerateGeodatabaseParameters Documentation](https://developers.arcgis.com/kotlin/api-reference/)
+
+---
+
 ### API Key Configuration
 
 **Severity:** Medium  

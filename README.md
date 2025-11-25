@@ -56,6 +56,8 @@ accessibility, and maintainability.
 - **Dynamic File Naming**: Geodatabases named after their services (e.g., `Operations.geodatabase`,
   `Basemap.geodatabase`)
 - **Smart Sync**: Sequential synchronization of all geodatabases to respective servers
+- **Full Feature Downloads**: Complete feature geometries for intersecting features (no clipping)
+  boundary for precise spatial control
 - **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
 
 ### Work Order Management
@@ -180,6 +182,7 @@ GdsGpsCollection/
 All application code is located in `app/src/main/java/com/enbridge/gdsgpscollection/` with the following package structure:
 
 ```
+
 com.enbridge.gdsgpscollection/
 ├── data/ # Data Layer
 │ ├── api/ # REST API interfaces and services
@@ -587,6 +590,8 @@ When contributing to this project:
 - **Dynamic File Naming**: Geodatabases named after their services (e.g., `Operations.geodatabase`,
   `Basemap.geodatabase`)
 - **Smart Sync**: Sequential synchronization of all geodatabases to respective servers
+- **Full Feature Downloads**: Complete feature geometries for intersecting features (no clipping)
+  boundary for precise spatial control
 - **Backward Compatible**: Legacy single-service (Wildfire) workflow fully supported
 
 ### Release Readiness (November 2025)

@@ -862,6 +862,83 @@ class ManageESRepositoryImpl @Inject constructor(
 - Implement error handling and retries
 - Manage resource cleanup (close file handles, etc.)
 
+**Advanced Example: Full Feature Download Strategy**
+
+Repositories can implement sophisticated data acquisition strategies that balance user experience
+with performance considerations:
+
+```kotlin
+/**
+ * Downloads geodatabase with full feature geometries for intersecting features.
+ * Prioritizes data completeness and user experience over file size optimization.
+ */
+private suspend fun executeDownload(
+    extent: Envelope,
+    attempt: Int,
+    channel: ProducerScope<ESDataDownloadProgress>
+): Geodatabase {
+    // Create geodatabase parameters
+    val generateParams = geodatabaseSyncTask
+        .createDefaultGenerateGeodatabaseParameters(extent)
+    
+    generateParams.apply {
+        returnAttachments = false
+        outSpatialReference = SpatialReference.webMercator()
+        // returnGeometry defaults to true → Full geometries downloaded
+    }
+    
+    // Server downloads complete geometries for features intersecting extent
+    val generateJob = geodatabaseSyncTask.createGenerateGeodatabaseJob(
+        generateParams, 
+        geodatabaseFilePath
+    )
+    
+    generateJob.start()
+    val result = generateJob.result()
+    
+    val geodatabase = result.getOrThrow()
+    geodatabase.load().getOrThrow()
+    
+    return geodatabase
+}
+```
+
+**Design Rationale:**
+
+This implementation:
+
+- **Prioritizes User Experience**: Users see complete features (e.g., full pipelines, complete
+  parcels)
+- **Maintains Data Integrity**: Features retain semantic meaning and complete geometries
+- **Simplifies Architecture**: No complex client-side geometry manipulation required
+- **Reduces Maintenance**: ~135 lines of clipping code removed from codebase
+- **Professional Quality**: No visual artifacts from clipped geometries at extent boundaries
+
+**Performance Trade-offs:**
+
+- ✅ Simplified codebase and reduced complexity
+- ✅ Better visual quality (no clipping artifacts)
+- ✅ Complete feature representation for infrastructure mapping
+- ⚠️ Larger file sizes when features extend beyond extent
+- ⚠️ Increased download times proportional to additional geometry data
+- ⚠️ Storage requirements may exceed extent-based estimates
+
+**When to Use This Approach:**
+
+- User experience and data completeness are priorities
+- Storage and bandwidth are not severely constrained
+- Features represent infrastructure that should be viewed completely (pipelines, parcels)
+- Professional cartographic quality is important
+
+**Alternative Approach:**
+
+For scenarios requiring strict extent-based filtering (e.g., extremely limited storage),
+consider implementing client-side geometry clipping using `GeometryEngine.clipOrNull()`
+after download completion.
+
+See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) - "Full Feature Download Strategy" for
+detailed discussion and performance characteristics.
+
 ---
 
 **2. Mappers (Data Transformation)**

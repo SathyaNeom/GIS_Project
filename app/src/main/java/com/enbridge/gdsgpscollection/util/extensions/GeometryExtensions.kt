@@ -133,6 +133,11 @@ fun Geometry.boundary(): Geometry? {
 /**
  * Clips this geometry to the specified envelope.
  *
+ * Note: This method is currently unused in the application. The application downloads
+ * complete feature geometries for features intersecting the download extent, rather than
+ * clipping geometries. This method is retained for potential future use cases where
+ * geometry clipping may be required (e.g., custom spatial analysis, reporting features).
+ *
  * @param envelope The clipping envelope
  * @return Clipped geometry or null if operation fails
  */

@@ -6,6 +6,7 @@ package com.enbridge.gdsgpscollection.ui.map
 
 import app.cash.turbine.test
 import com.arcgismaps.geometry.Envelope
+import com.arcgismaps.geometry.Point
 import com.arcgismaps.geometry.SpatialReference
 import com.enbridge.gdsgpscollection.domain.config.FeatureServiceConfiguration
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
@@ -50,6 +51,9 @@ class ManageESViewModelTest {
     private lateinit var manageESFacade: ManageESFacade
     private lateinit var configuration: FeatureServiceConfiguration
     private lateinit var networkMonitor: NetworkMonitor
+    private lateinit var locationFeatureFlags: com.enbridge.gdsgpscollection.domain.config.LocationFeatureFlags
+    private lateinit var locationManager: com.enbridge.gdsgpscollection.ui.map.delegates.LocationManagerDelegate
+    private lateinit var extentManager: com.enbridge.gdsgpscollection.ui.map.delegates.ExtentManagerDelegate
     private lateinit var viewModel: ManageESViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -61,13 +65,24 @@ class ManageESViewModelTest {
         manageESFacade = mockk()
         configuration = mockk()
         networkMonitor = mockk()
+        locationFeatureFlags = mockk(relaxed = true)
+        locationManager = mockk(relaxed = true)
+        extentManager = mockk()
 
         // Default mocks for initialization
-        coEvery { manageESFacade.getSelectedDistance() } returns ESDataDistance.TWO_KILOMETERS
         coEvery { manageESFacade.getChangedData() } returns Result.success(emptyList())
+        coEvery { manageESFacade.getSelectedDistance() } returns ESDataDistance.HUNDRED_METERS
 
         // Mock network monitor to emit connected state by default
         every { networkMonitor.isConnected } returns flowOf(true)
+
+        // Mock location availability
+        every { locationManager.isLocationAvailable } returns kotlinx.coroutines.flow.MutableStateFlow(
+            true
+        )
+        every { locationManager.currentLocation } returns kotlinx.coroutines.flow.MutableStateFlow(
+            Point(x = -13633371.0, y = 4546384.0, spatialReference = SpatialReference.webMercator())
+        )
     }
 
     @After
@@ -79,7 +94,10 @@ class ManageESViewModelTest {
         return ManageESViewModel(
             manageESFacade = manageESFacade,
             configuration = configuration,
-            networkMonitor = networkMonitor
+            networkMonitor = networkMonitor,
+            locationFeatureFlags = locationFeatureFlags,
+            locationManager = locationManager,
+            extentManager = extentManager
         )
     }
 
@@ -91,7 +109,7 @@ class ManageESViewModelTest {
 
         // Then
         val state = viewModel.uiState.value
-        assertEquals(ESDataDistance.TWO_KILOMETERS, state.selectedDistance)
+        assertEquals(ESDataDistance.HUNDRED_METERS, state.selectedDistance)
         assertFalse(state.isDownloading)
         assertFalse(state.isUploading)
         assertFalse(state.showDeleteDialog)
@@ -142,15 +160,29 @@ class ManageESViewModelTest {
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Create a test extent
-        val extent = Envelope(
+        // Create test data
+        val testDistance = ESDataDistance.HUNDRED_METERS
+        val testLocation = Point(
+            x = -13633371.0,
+            y = 4546384.0,
+            spatialReference = SpatialReference.webMercator()
+        )
+
+        // Mock extent calculation
+        val mockExtent = Envelope(
             xMin = -79.4, yMin = 43.6,
             xMax = -79.3, yMax = 43.7,
             spatialReference = SpatialReference.wgs84()
         )
+        coEvery { extentManager.calculateExtentForDistance(any(), any()) } returns mockExtent
 
         // When
-        viewModel.onGetDataClicked(extent, onGeodatabasesDownloaded = {}, onSaveTimestamp = {})
+        viewModel.onGetDataClicked(
+            selectedDistance = testDistance,
+            centerPoint = testLocation,
+            onGeodatabasesDownloaded = {},
+            onSaveTimestamp = {}
+        )
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then

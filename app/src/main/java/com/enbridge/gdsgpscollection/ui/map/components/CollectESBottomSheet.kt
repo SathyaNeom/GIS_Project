@@ -29,14 +29,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -57,11 +53,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import com.enbridge.gdsgpscollection.designsystem.components.AppTextField
 import com.enbridge.gdsgpscollection.designsystem.components.PrimaryButton
 import com.enbridge.gdsgpscollection.designsystem.components.SecondaryButton
 import com.enbridge.gdsgpscollection.designsystem.components.SingleSelectDropdown
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.DATE
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.DROPDOWN
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.LOCATION
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.NUMBER
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.TEXT
+import com.enbridge.gdsgpscollection.domain.entity.AttributeType.TEXTMULTILINE
 import com.enbridge.gdsgpscollection.ui.map.CollectESUiState
 import com.enbridge.gdsgpscollection.ui.map.components.common.BottomSheetHeader
 import com.enbridge.gdsgpscollection.ui.map.components.common.EmptyState
@@ -70,7 +73,6 @@ import com.enbridge.gdsgpscollection.ui.map.models.AttributeType
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureAttribute
 import com.enbridge.gdsgpscollection.ui.map.models.FeatureType
 import kotlinx.coroutines.launch
-import androidx.core.graphics.toColorInt
 
 /**
  * Mapper to convert domain FeatureType to UI FeatureType
@@ -92,12 +94,12 @@ private fun com.enbridge.gdsgpscollection.domain.entity.FeatureAttribute.toUiMod
         id = id,
         label = label,
         type = when (type) {
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.TEXT -> AttributeType.TEXT
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.TEXTMULTILINE -> AttributeType.TEXTMULTILINE
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.NUMBER -> AttributeType.NUMBER
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.DROPDOWN -> AttributeType.DROPDOWN
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.DATE -> AttributeType.DATE
-            com.enbridge.gdsgpscollection.domain.entity.AttributeType.LOCATION -> AttributeType.LOCATION
+            TEXT -> AttributeType.TEXT
+            TEXTMULTILINE -> AttributeType.TEXTMULTILINE
+            NUMBER -> AttributeType.NUMBER
+            DROPDOWN -> AttributeType.DROPDOWN
+            DATE -> AttributeType.DATE
+            LOCATION -> AttributeType.LOCATION
         },
         isRequired = isRequired,
         options = options,

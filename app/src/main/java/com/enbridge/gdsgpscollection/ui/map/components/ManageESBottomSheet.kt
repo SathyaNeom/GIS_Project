@@ -95,6 +95,7 @@ import com.enbridge.gdsgpscollection.ui.map.ManageESUiState
 import com.enbridge.gdsgpscollection.ui.map.ManageESViewModel
 import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.geometry.Envelope
+import com.enbridge.gdsgpscollection.util.Logger
 import kotlinx.coroutines.launch
 
 /**
@@ -106,7 +107,6 @@ import kotlinx.coroutines.launch
 fun ManageESBottomSheet(
     onDismissRequest: () -> Unit,
     onPostDataSnackbar: () -> Unit,
-    getCurrentMapExtent: () -> Envelope?,
     initialViewpoint: Viewpoint?,
     onRestoreViewpoint: (Viewpoint) -> Unit,
     modifier: Modifier = Modifier,
@@ -133,6 +133,28 @@ fun ManageESBottomSheet(
     // This eliminates race conditions with map animations updating currentViewpoint
     LaunchedEffect(Unit) {
         viewModel.storeOriginalViewpoint(initialViewpoint)
+    }
+
+    // Clear stale download state when bottom sheet opens without active geodatabase
+    // This prevents showing "Data downloaded successfully" message from previous sessions
+    // Detection: if download shows complete state (progress > 0) but no operation is active,
+    // this is stale state from a previous session where geodatabase was deleted
+    val hasStaleSuccessMessage = remember(uiState.downloadProgress, uiState.isDownloadInProgress) {
+        !uiState.isDownloadInProgress &&
+                !uiState.isDownloading &&
+                uiState.downloadProgress > 0f &&
+                uiState.downloadError == null
+    }
+
+    // Clear state immediately on composition to prevent race condition with success LaunchedEffect
+    if (hasStaleSuccessMessage) {
+        LaunchedEffect(Unit) {
+            Logger.d(
+                "ManageESBottomSheet",
+                "Detected stale download state on sheet open - clearing immediately"
+            )
+            viewModel.onBottomSheetOpened(hasGeodatabase = false)
+        }
     }
 
     // Clear error states when the bottom sheet is disposed
@@ -163,11 +185,22 @@ fun ManageESBottomSheet(
     }
 
     // Handle download success - dismiss bottom sheet and show success snackbar
+    // CRITICAL: Skip success handling if stale state detected (prevents false success after geodatabase cleared)
     LaunchedEffect(
         uiState.isDownloadInProgress,
         uiState.downloadError,
-        uiState.multiServiceProgress
+        uiState.multiServiceProgress,
+        downloadSuccessTriggered
     ) {
+        // Skip if stale state detected
+        if (hasStaleSuccessMessage) {
+            Logger.d(
+                "ManageESBottomSheet",
+                "Skipping success handler due to stale state detection"
+            )
+            return@LaunchedEffect
+        }
+
         // Multi-service download completion
         val progress = uiState.multiServiceProgress
         if (!uiState.isDownloadInProgress &&
@@ -246,12 +279,38 @@ fun ManageESBottomSheet(
             onDistanceSelected(distance)
         },
         onGetDataClicked = {
-            val extent = getCurrentMapExtent()
-            if (extent != null) {
-                viewModel.onGetDataClicked(extent, onGeodatabasesDownloaded)
+            // Calculate extent based on selected distance and current location
+            // instead of using the entire visible viewport
+            val distance = uiState.selectedDistance
+            val location = currentLocation
+
+            Logger.i(
+                "ManageESBottomSheet",
+                "Get Data clicked - distance=$distance, location=$location"
+            )
+
+            if (distance != null && location != null) {
+                Logger.d(
+                    "ManageESBottomSheet",
+                    "Calling viewModel.onGetDataClicked with distance=${distance.displayText}, location=(${location.x.toInt()}, ${location.y.toInt()})"
+                )
+                viewModel.onGetDataClicked(
+                    selectedDistance = distance,
+                    centerPoint = location,
+                    onGeodatabasesDownloaded = onGeodatabasesDownloaded
+                )
             } else {
+                Logger.w(
+                    "ManageESBottomSheet",
+                    "Cannot call Get Data - distance=$distance, location=$location"
+                )
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Unable to get map extent. Please try again.")
+                    val message = when {
+                        location == null -> "Location unavailable. Please wait for GPS fix."
+                        distance == null -> "Please select a distance."
+                        else -> "Unable to calculate download extent."
+                    }
+                    snackbarHostState.showSnackbar(message)
                 }
             }
         },
@@ -425,13 +484,13 @@ private fun ManageESBottomSheetContent(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Get data or Post Data",
+                        text = stringResource(R.string.managees_get_data_or_post_data),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(Spacing.extraSmall))
                     Text(
-                        text = "Get Data - Select a Distance around where you are standing",
+                        text = stringResource(R.string.managees_get_data_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontStyle = FontStyle.Italic
@@ -440,8 +499,8 @@ private fun ManageESBottomSheetContent(
 
                 AppIconButton(
                     icon = Icons.Default.Close,
-                    contentDescription = "Close",
-                    onClick = onDismissRequest,  // This now triggers handleDismiss -> viewpoint restoration
+                    contentDescription = stringResource(R.string.close),
+                    onClick = onDismissRequest,
                     enabled = !uiState.isDownloading && !uiState.isUploading
                 )
             }
@@ -622,14 +681,14 @@ private fun DeleteJobCardsDialog(
 ) {
     AppDialog(
         onDismissRequest = onDismiss,
-        title = "Delete Job Card Info",
+        title = stringResource(R.string.managees_delete_job_card_info),
         type = DialogType.INFO,
         content = {
             Text(
                 text = if (deletedCount == 0) {
-                    "No Job Card has been saved"
+                    stringResource(R.string.managees_no_job_card_saved)
                 } else {
-                    "$deletedCount Job Card(s) deleted successfully"
+                    stringResource(R.string.managees_deleted_job_cards, deletedCount)
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
@@ -637,7 +696,7 @@ private fun DeleteJobCardsDialog(
         },
         confirmButton = {
             PrimaryButton(
-                text = "OK",
+                text = stringResource(android.R.string.ok),
                 onClick = onDismiss
             )
         }
@@ -676,20 +735,20 @@ private fun LocationStatusIndicator(
         ) {
             Icon(
                 imageVector = Icons.Default.LocationOff,
-                contentDescription = "Location unavailable",
+                contentDescription = stringResource(R.string.managees_location_unavailable),
                 tint = MaterialTheme.colorScheme.error
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "Location unavailable",
+                    text = stringResource(R.string.managees_location_unavailable),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 val instruction = if (!hasLocationPermission) {
-                    "Please grant location permission in app settings."
+                    stringResource(R.string.managees_grant_location_permission)
                 } else {
-                    "Check that location is enabled on your device."
+                    stringResource(R.string.managees_check_location_enabled)
                 }
                 Text(
                     text = instruction,
@@ -713,7 +772,6 @@ private fun ManageESBottomSheetPreview() {
         ManageESBottomSheet(
             onDismissRequest = {},
             onPostDataSnackbar = {},
-            getCurrentMapExtent = { null },
             initialViewpoint = null,
             onRestoreViewpoint = {},
             snackbarHostState = remember { SnackbarHostState() }

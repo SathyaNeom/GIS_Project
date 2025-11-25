@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,6 +123,7 @@ fun MainMapScreen(
     val collectESViewModel: CollectESViewModel = hiltViewModel()
     val projectSettingsViewModel: ProjectSettingsViewModel = hiltViewModel()
     val mainMapViewModel: MainMapViewModel = hiltViewModel()
+    val manageESViewModel: ManageESViewModel = hiltViewModel()
 
     // Location Feature Flags accessed from MainMapViewModel
     val locationFeatureFlags = mainMapViewModel.locationFeatureFlags
@@ -588,9 +590,6 @@ fun MainMapScreen(
                             context.getString(com.enbridge.gdsgpscollection.R.string.msg_data_downloaded_successfully)
                         )
                     }
-                },
-                getCurrentMapExtent = {
-                    screenState.coordinateState.currentViewpoint?.toEnvelope()
                 },
                 initialViewpoint = screenState.bottomSheetState.manageESCapturedViewpoint,
                 onRestoreViewpoint = { viewpoint ->

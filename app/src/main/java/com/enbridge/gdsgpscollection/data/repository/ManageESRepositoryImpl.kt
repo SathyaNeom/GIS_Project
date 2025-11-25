@@ -7,7 +7,6 @@ package com.enbridge.gdsgpscollection.data.repository
 import android.content.Context
 import com.arcgismaps.data.Geodatabase
 import com.arcgismaps.geometry.Envelope
-import com.arcgismaps.geometry.GeometryEngine
 import com.arcgismaps.geometry.Point
 import com.arcgismaps.geometry.SpatialReference
 import com.arcgismaps.tasks.geodatabase.GenerateGeodatabaseJob
@@ -29,6 +28,9 @@ import com.enbridge.gdsgpscollection.domain.entity.MultiServiceDownloadProgress
 import com.enbridge.gdsgpscollection.domain.repository.ManageESRepository
 import com.enbridge.gdsgpscollection.util.Constants
 import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.error.ErrorMapper
+import com.enbridge.gdsgpscollection.util.error.GeodatabaseError.*
+import com.enbridge.gdsgpscollection.util.network.RetryStrategy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +101,10 @@ class ManageESRepositoryImpl @Inject constructor(
 
     /**
      * Downloads geodatabase data from the feature service using the current map extent.
+     *
+     * Features whose geometry intersects the extent are downloaded with their complete
+     * (non-clipped) geometry, ensuring users see full features even if portions extend
+     * beyond the selected distance boundary.
      *
      * Enhanced with edge case handling:
      * - Pre-flight connectivity check
@@ -194,7 +200,7 @@ class ManageESRepositoryImpl @Inject constructor(
             }
 
             // ========== RETRY LOGIC: Execute download with exponential backoff ==========
-            val retryStrategy = com.enbridge.gdsgpscollection.util.network.RetryStrategy.DEFAULT
+            val retryStrategy = RetryStrategy.DEFAULT
 
             val downloadResult = retryStrategy.execute<Geodatabase>(
                 block = { attempt ->
@@ -238,21 +244,21 @@ class ManageESRepositoryImpl @Inject constructor(
                 Logger.e(TAG, "Download failed after all retry attempts", error)
 
                 // Map error to user-friendly type
-                val errorType = com.enbridge.gdsgpscollection.util.error.ErrorMapper.mapError(error)
+                val errorType = ErrorMapper.mapError(error)
                 val errorMessage = when (errorType) {
-                    com.enbridge.gdsgpscollection.util.error.GeodatabaseError.NO_INTERNET ->
+                    NO_INTERNET ->
                         context.getString(R.string.error_no_internet_message)
 
-                    com.enbridge.gdsgpscollection.util.error.GeodatabaseError.SERVER_UNAVAILABLE ->
+                    SERVER_UNAVAILABLE ->
                         context.getString(R.string.error_server_unavailable_message)
 
-                    com.enbridge.gdsgpscollection.util.error.GeodatabaseError.SERVER_TIMEOUT ->
+                    SERVER_TIMEOUT ->
                         context.getString(R.string.error_server_timeout_message)
 
-                    com.enbridge.gdsgpscollection.util.error.GeodatabaseError.AUTHENTICATION_FAILED ->
+                    AUTHENTICATION_FAILED ->
                         context.getString(R.string.error_authentication_failed_message)
 
-                    com.enbridge.gdsgpscollection.util.error.GeodatabaseError.AUTHORIZATION_FAILED ->
+                    AUTHORIZATION_FAILED ->
                         context.getString(R.string.error_authorization_failed_message)
 
                     else ->
@@ -285,6 +291,20 @@ class ManageESRepositoryImpl @Inject constructor(
     /**
      * Executes the actual download operation.
      * Extracted to separate method for retry logic.
+     *
+     * **Full Feature Download Strategy:**
+     * Any feature whose geometry intersects the extent boundary (even if just touching)
+     * will be downloaded with its COMPLETE geometry (not clipped to extent). This ensures
+     * users see full features without visual artifacts.
+     *
+     * **Performance Consideration:**
+     * Large features (e.g., 10km pipelines) intersecting a small extent (e.g., 500m) will
+     * download their entire geometry, resulting in:
+     * - Larger file sizes than extent-based area calculation
+     * - Longer download times for features extending far beyond extent
+     * - Increased storage usage
+     *
+     * This trade-off prioritizes data completeness and user experience over file optimization.
      *
      * **Progress Calculation Strategy:**
      * This method implements a smooth, monotonically increasing progress display from 0% to 100%
@@ -366,9 +386,39 @@ class ManageESRepositoryImpl @Inject constructor(
                 throw error
             }
 
+        // IMPORTANT: Full Feature Geometry Download Configuration
+        //
+        // The extent parameter passed to createDefaultGenerateGeodatabaseParameters(extent)
+        // instructs the ArcGIS Server to:
+        // 1. Identify features whose geometry intersects the extent (including features that only touch the boundary)
+        // 2. Download COMPLETE (non-clipped) geometries for all intersecting features
+        //
+        // Feature Selection Behavior:
+        // - Points: Downloaded if point is within extent
+        // - Lines: Downloaded if ANY segment intersects extent → FULL line geometry returned (not clipped)
+        //   Example: 5km pipeline with 1km intersecting extent → entire 5km geometry downloaded
+        // - Polygons: Downloaded if ANY part intersects or touches extent → FULL polygon geometry returned (not clipped)
+        //
+        // Performance Trade-off:
+        // This approach prioritizes feature completeness over file size optimization.
+        // Users see complete features even if large portions extend beyond the selected distance.
+        //
+        // CAUTION: Large features intersecting small extents will significantly increase:
+        // - Download time (entire feature geometry transferred)
+        // - File size (full geometries stored)
+        // - Storage requirements (may exceed extent-based estimates)
+        //
+        // Server Requirements:
+        // - The server must have "Extract" capability enabled
+        // - The server determines which features intersect based on extent
+        // - returnGeometry parameter should be true (default) to include full geometries
+        //
+        // Reference: https://github.com/Esri/arcgis-maps-sdk-kotlin-samples
+
         generateParams.apply {
             returnAttachments = false
             outSpatialReference = SpatialReference.webMercator()
+            // returnGeometry defaults to true, ensuring full geometries are downloaded
         }
 
         // Delete existing geodatabase if present
@@ -477,12 +527,25 @@ class ManageESRepositoryImpl @Inject constructor(
         )
         Logger.d(TAG, "Progress: 95% - Processing geodatabase")
 
-        // Return the geodatabase or throw if generation failed
-        return result.getOrElse { error ->
+        // Get the geodatabase or throw if generation failed
+        val geodatabase = result.getOrElse { error ->
             Logger.e(TAG, "Geodatabase generation failed", error)
             throw error
         }
+
+        // Load geodatabase to ensure it's ready for use
+        geodatabase.load().onFailure { error ->
+            Logger.e(TAG, "Failed to load geodatabase", error)
+            throw error
+        }
+        Logger.i(
+            TAG,
+            "Geodatabase loaded with ${geodatabase.featureTables.size} feature tables - ready for use")
+
+        return geodatabase
     }
+
+
 
     /**
      * Synchronizes local geodatabase changes with the feature service
@@ -701,6 +764,16 @@ class ManageESRepositoryImpl @Inject constructor(
      * This method is similar to [downloadESData] but accepts a service configuration
      * and uses dynamic file naming based on service ID.
      *
+     * **Full Feature Download Strategy:**
+     * Any feature whose geometry intersects the extent boundary (even if just touching)
+     * will be downloaded with its COMPLETE geometry (not clipped to extent). This ensures
+     * users see full features without visual artifacts.
+     *
+     * **Environment-Specific Behavior:**
+     * In Project environment, only the Basemap service applies full-feature download logic
+     * (as Basemap layers are displayed on map). Operations service follows default server
+     * behavior (TOC-only display, may use server-side optimization).
+     *
      * **Progress Calculation Strategy:**
      * Implements the same smooth progress tracking as [executeDownload]:
      * - **0-10%**: Pre-flight checks (implicit, handled by caller)
@@ -798,9 +871,13 @@ class ManageESRepositoryImpl @Inject constructor(
                     return@channelFlow
                 }
 
+            // Configure parameters for full-feature download (same as single-service download)
+            // Note: In Project environment, this applies primarily to Basemap service (displayed on map)
+            // Operations service (TOC-only) may follow different server-side behavior
             generateParams.apply {
                 returnAttachments = false
                 outSpatialReference = SpatialReference.webMercator()
+                // returnGeometry defaults to true, ensuring full geometries are downloaded
             }
 
             // Get geodatabase path for this service

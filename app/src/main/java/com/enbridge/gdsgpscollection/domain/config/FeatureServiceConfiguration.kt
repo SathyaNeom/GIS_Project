@@ -136,7 +136,7 @@ object FeatureServiceConfiguration {
      *
      * This environment uses Esri's publicly accessible Wildfire sample service,
      * which is ideal for:
-     * - Development and testing without VPN
+     * - Development and testing without VPN or CA Certificate
      * - Remote work scenarios
      * - Demonstrations and training
      * - Fallback when project servers are unavailable
