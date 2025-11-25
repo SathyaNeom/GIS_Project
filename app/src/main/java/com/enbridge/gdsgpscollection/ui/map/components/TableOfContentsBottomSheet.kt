@@ -4,6 +4,7 @@ package com.enbridge.gdsgpscollection.ui.map.components
  * @author Sathya Narayanan
  */
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,11 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
@@ -30,10 +32,16 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -47,11 +55,15 @@ import coil.request.ImageRequest
 import com.enbridge.gdsgpscollection.R
 import com.enbridge.gdsgpscollection.designsystem.components.AppIconButton
 import com.enbridge.gdsgpscollection.designsystem.components.AppTriStateCheckbox
+import com.enbridge.gdsgpscollection.designsystem.theme.AnimationConstants
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.domain.entity.GeometryType
 import com.enbridge.gdsgpscollection.domain.entity.LegendItem
 import com.enbridge.gdsgpscollection.ui.map.models.LayerUiState
+import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.rememberShouldAnimate
+import kotlinx.coroutines.delay
 import java.io.File
 
 /**
@@ -157,16 +169,20 @@ fun TableOfContentsBottomSheet(
                         .padding(vertical = Spacing.extraLarge)
                 )
             } else {
-                // Display list of layers
+                // Display list of layers with staggered animation
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false),
                     verticalArrangement = Arrangement.spacedBy(Spacing.small)
                 ) {
-                    items(layers, key = { it.id }) { layer ->
-                        LayerItemWithLegend(
+                    itemsIndexed(
+                        items = layers,
+                        key = { _, layer -> layer.id }
+                    ) { index, layer ->
+                        AnimatedLayerItem(
                             layer = layer,
+                            itemIndex = index,
                             onToggleVisibility = {
                                 onToggleLayerVisibility(layer.id, !layer.isVisible)
                             },
@@ -215,6 +231,85 @@ fun TableOfContentsBottomSheet(
                 }
             }
         }
+    }
+}
+
+/**
+ * Animated wrapper for layer items with staggered entrance animation.
+ *
+ * **Animations:**
+ * - Staggered fade-in based on item index (50ms delay per item)
+ * - Subtle slide-up from bottom (20dp offset)
+ * - Scale animation for polish (0.95 → 1.0)
+ *
+ * @param layer The layer UI state to display
+ * @param itemIndex Index of the item in the list (for stagger calculation)
+ * @param onToggleVisibility Callback invoked when the visibility checkbox is toggled
+ * @param onToggleExpanded Callback invoked when expand/collapse is triggered
+ */
+@Composable
+private fun AnimatedLayerItem(
+    layer: LayerUiState,
+    itemIndex: Int,
+    onToggleVisibility: () -> Unit,
+    onToggleExpanded: () -> Unit
+) {
+    val shouldAnimate by rememberShouldAnimate()
+    var isVisible by remember { mutableStateOf(false) }
+
+    // Trigger staggered animation
+    LaunchedEffect(Unit) {
+        if (shouldAnimate) {
+            delay(itemIndex * AnimationConstants.STAGGER_DELAY.toLong())
+        }
+        isVisible = true
+        Logger.d("TableOfContents", "Layer item animated: ${layer.name} (index: $itemIndex)")
+    }
+
+    // Alpha animation
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) AnimationConstants.ALPHA_VISIBLE else AnimationConstants.ALPHA_INVISIBLE,
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.tweenNormal()
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Layer item alpha"
+    )
+
+    // Scale animation
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) AnimationConstants.SCALE_NORMAL else 0.95f,
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.SPRING_SMOOTH
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Layer item scale"
+    )
+
+    // Slide-up animation
+    val offsetY by animateFloatAsState(
+        targetValue = if (isVisible) 0f else 20f,
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.tweenEnter()
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Layer item offset"
+    )
+
+    Box(
+        modifier = Modifier
+            .alpha(alpha)
+            .scale(scale)
+            .offset(y = offsetY.dp)
+    ) {
+        LayerItemWithLegend(
+            layer = layer,
+            onToggleVisibility = onToggleVisibility,
+            onToggleExpanded = onToggleExpanded
+        )
     }
 }
 

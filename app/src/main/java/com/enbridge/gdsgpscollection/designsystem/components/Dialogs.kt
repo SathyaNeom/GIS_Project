@@ -4,6 +4,8 @@ package com.enbridge.gdsgpscollection.designsystem.components
  * @author Sathya Narayanan
  */
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,20 +32,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.enbridge.gdsgpscollection.R
+import com.enbridge.gdsgpscollection.designsystem.theme.AnimationConstants
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.ErrorRed
 import com.enbridge.gdsgpscollection.designsystem.theme.InfoBlue
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.designsystem.theme.SuccessGreen
 import com.enbridge.gdsgpscollection.designsystem.theme.WarningAmber
+import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.rememberShouldAnimate
 
 /**
  * Dialog type enum for different states
@@ -81,9 +97,20 @@ private fun getDialogColor(type: DialogType): Color {
 }
 
 /**
- * Custom dialog with type-based styling
- * Shows relevant icon and color bar based on type
- * Provides slots for action buttons
+ * Custom dialog with type-based styling and smooth entrance/exit animations.
+ *
+ * **Animations:**
+ * - Backdrop: Fade in/out (250ms)
+ * - Dialog card: Scale + Fade (250ms with emphasized easing)
+ * - Icon: Bounce scale on entrance
+ *
+ * **Accessibility:**
+ * - Respects system animation settings
+ * - Fallback to instant appearance if animations disabled
+ * - Proper content descriptions for screen readers
+ *
+ * Shows relevant icon and color bar based on type.
+ * Provides slots for action buttons.
  */
 @Composable
 fun AppDialog(
@@ -97,6 +124,72 @@ fun AppDialog(
 ) {
     val dialogColor = getDialogColor(type)
     val dialogIcon = getDialogIcon(type)
+    val shouldAnimate by rememberShouldAnimate()
+
+    // Animation state for entrance
+    var isVisible by remember { mutableStateOf(false) }
+
+    // Trigger entrance animation
+    LaunchedEffect(Unit) {
+        isVisible = true
+        Logger.d("AppDialog", "Dialog entrance animation triggered - Type: $type")
+    }
+
+    // Backdrop fade animation
+    val backdropAlpha by animateFloatAsState(
+        targetValue = if (isVisible) 0.5f else 0f,
+        animationSpec = if (shouldAnimate) {
+            tween(
+                durationMillis = AnimationConstants.DURATION_NORMAL,
+                easing = AnimationConstants.EASING_STANDARD
+            )
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Dialog backdrop alpha"
+    )
+
+    // Dialog scale animation
+    val dialogScale by animateFloatAsState(
+        targetValue = if (isVisible) AnimationConstants.SCALE_NORMAL else AnimationConstants.SCALE_INITIAL,
+        animationSpec = if (shouldAnimate) {
+            tween(
+                durationMillis = AnimationConstants.DURATION_NORMAL,
+                easing = AnimationConstants.EASING_EMPHASIZED
+            )
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Dialog scale"
+    )
+
+    // Dialog alpha animation
+    val dialogAlpha by animateFloatAsState(
+        targetValue = if (isVisible) AnimationConstants.ALPHA_VISIBLE else AnimationConstants.ALPHA_INVISIBLE,
+        animationSpec = if (shouldAnimate) {
+            tween(
+                durationMillis = AnimationConstants.DURATION_NORMAL,
+                easing = AnimationConstants.EASING_EMPHASIZED
+            )
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Dialog alpha"
+    )
+
+    // Icon bounce animation (delayed start for polish)
+    val iconScale by animateFloatAsState(
+        targetValue = if (isVisible) AnimationConstants.SCALE_NORMAL else AnimationConstants.SCALE_INITIAL,
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.SPRING_SMOOTH
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Dialog icon scale"
+    )
+
+    // Content description for accessibility
+    val contentDesc = stringResource(R.string.cd_dialog_appearing)
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -109,13 +202,16 @@ fun AppDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f)),
+                .background(Color.Black.copy(alpha = backdropAlpha))
+                .semantics { this.contentDescription = contentDesc },
             contentAlignment = Alignment.Center
         ) {
             Card(
                 modifier = modifier
                     .widthIn(max = 400.dp)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .scale(dialogScale)
+                    .alpha(dialogAlpha),
                 shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -135,13 +231,14 @@ fun AppDialog(
                             .fillMaxWidth()
                             .padding(Spacing.large)
                     ) {
-                        // Icon at the top
+                        // Icon at the top with bounce animation
                         Icon(
                             imageVector = dialogIcon,
                             contentDescription = null,
                             tint = dialogColor,
                             modifier = Modifier
                                 .size(48.dp)
+                                .scale(iconScale)
                                 .align(Alignment.CenterHorizontally)
                         )
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Animation Durations -->
+
+    <!-- Fast animations - For immediate feedback (150ms) -->
+    <integer name="animation_duration_fast">150</integer>
+
+    <!-- Normal animations - Standard transitions (300ms) -->
+    <integer name="animation_duration_normal">300</integer>
+
+    <!-- Slow animations - Complex transitions (500ms) -->
+    <integer name="animation_duration_slow">500</integer>
+
+    <!-- Instant animations - No animation (0ms) -->
+    <integer name="animation_duration_instant">0</integer>
+
+    <!-- Stagger delays for list items (50ms) -->
+    <integer name="animation_stagger_delay">50</integer>
+
+    <!-- Short stagger delay (30ms) -->
+    <integer name="animation_stagger_delay_short">30</integer>
+
+    <!-- Animation Configuration -->
+
+    <!-- Enable/disable animations globally (for testing) -->
+    <bool name="animations_enabled">true</bool>
+
+    <!-- Enable complex animations (springs, bounces) -->
+    <bool name="complex_animations_enabled">true</bool>
+
+    <!-- Enable staggered list animations -->
+    <bool name="staggered_animations_enabled">true</bool>
+</resources>

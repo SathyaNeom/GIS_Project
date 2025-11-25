@@ -4,7 +4,9 @@ package com.enbridge.gdsgpscollection.designsystem.components
  * @author Sathya Narayanan
  */
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,25 +35,44 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.enbridge.gdsgpscollection.designsystem.theme.AnimationConstants
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.MinTouchTargetSize
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
 import com.enbridge.gdsgpscollection.designsystem.theme.md_theme_light_progressUnfilled
 import com.enbridge.gdsgpscollection.designsystem.theme.md_theme_dark_progressUnfilled
+import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.rememberShouldAnimate
 
 /**
- * Primary button with filled style using the primary theme color
- * Uses medium corner radius (8.dp) for consistent brand identity
- * Minimum touch target of 48dp for accessibility
+ * Primary button with filled style using the primary theme color.
+ *
+ * **Animations:**
+ * - Press state: Scales down to 0.95 on press (subtle feedback)
+ * - Uses stiff spring for snappy response
+ *
+ * **Accessibility:**
+ * - Respects reduced motion preferences
+ * - Maintains minimum 48dp touch target
+ *
+ * Uses medium corner radius (8.dp) for consistent brand identity.
+ * Minimum touch target of 48dp for accessibility.
  */
 @Composable
 fun PrimaryButton(
@@ -61,11 +82,44 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
+    val shouldAnimate by rememberShouldAnimate()
+    var isPressed by remember { mutableStateOf(false) }
+
+    // Press animation
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) {
+            AnimationConstants.SCALE_PRESSED
+        } else {
+            AnimationConstants.SCALE_NORMAL
+        },
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.SPRING_STIFF
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Button press scale"
+    )
+
     Button(
-        onClick = onClick,
+        onClick = {
+            Logger.d("PrimaryButton", "Button clicked: $text")
+            onClick()
+        },
         modifier = modifier
             .fillMaxWidth()
-            .height(MinTouchTargetSize),
+            .height(MinTouchTargetSize)
+            .scale(scale)
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        }
+                    )
+                }
+            },
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -92,8 +146,13 @@ fun PrimaryButton(
 }
 
 /**
- * Secondary button with outlined style using the secondary theme color
- * Provides a less prominent alternative to the primary button
+ * Secondary button with outlined style using the secondary theme color.
+ *
+ * **Animations:**
+ * - Press state: Scales down to 0.95 on press (subtle feedback)
+ * - Uses stiff spring for snappy response
+ *
+ * Provides a less prominent alternative to the primary button.
  */
 @Composable
 fun SecondaryButton(
@@ -103,11 +162,44 @@ fun SecondaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
+    val shouldAnimate by rememberShouldAnimate()
+    var isPressed by remember { mutableStateOf(false) }
+
+    // Press animation
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) {
+            AnimationConstants.SCALE_PRESSED
+        } else {
+            AnimationConstants.SCALE_NORMAL
+        },
+        animationSpec = if (shouldAnimate) {
+            AnimationConstants.SPRING_STIFF
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "Button press scale"
+    )
+
     OutlinedButton(
-        onClick = onClick,
+        onClick = {
+            Logger.d("SecondaryButton", "Button clicked: $text")
+            onClick()
+        },
         modifier = modifier
             .fillMaxWidth()
-            .height(MinTouchTargetSize),
+            .height(MinTouchTargetSize)
+            .scale(scale)
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        }
+                    )
+                }
+            },
         enabled = enabled,
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.secondary,

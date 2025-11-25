@@ -4,6 +4,8 @@ package com.enbridge.gdsgpscollection.designsystem.components
  * @author Sathya Narayanan
  */
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,23 +23,43 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.enbridge.gdsgpscollection.R
+import com.enbridge.gdsgpscollection.designsystem.theme.AnimationConstants
 import com.enbridge.gdsgpscollection.designsystem.theme.GdsGpsCollectionTheme
 import com.enbridge.gdsgpscollection.designsystem.theme.Spacing
+import com.enbridge.gdsgpscollection.util.Logger
+import com.enbridge.gdsgpscollection.util.rememberShouldAnimate
 
 /**
- * Reusable OutlinedTextField with comprehensive customization options
- * Accepts parameters for label, placeholder, icons, and validation feedback
- * Focused border and label use the primary theme color
- * Supports accessibility with proper error states and descriptions
+ * Reusable OutlinedTextField with comprehensive customization options.
+ *
+ * **Animations:**
+ * - Border color: Smooth transition when error state changes (300ms)
+ * - Icon color: Animated transition matching border
+ * - Uses standard easing for professional feel
+ *
+ * **Accessibility:**
+ * - Respects reduced motion preferences
+ * - Proper error announcements for screen readers
+ * - Semantic content descriptions
+ *
+ * Accepts parameters for label, placeholder, icons, and validation feedback.
+ * Focused border and label use the primary theme color.
+ * Supports accessibility with proper error states and descriptions.
  */
 @Composable
 fun AppTextField(
@@ -59,7 +81,59 @@ fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
-    Column(modifier = modifier) {
+    val shouldAnimate by rememberShouldAnimate()
+
+    // Log error state changes
+    LaunchedEffect(isError) {
+        if (isError) {
+            Logger.d("AppTextField", "Field validation error: ${label ?: "unnamed field"}")
+        }
+    }
+
+    // Animated border colors for error state
+    val errorBorderColor by animateColorAsState(
+        targetValue = if (isError) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.outline
+        },
+        animationSpec = if (shouldAnimate) {
+            tween(
+                durationMillis = AnimationConstants.DURATION_NORMAL,
+                easing = AnimationConstants.EASING_STANDARD
+            )
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "TextField border color"
+    )
+
+    // Animated icon colors
+    val iconColor by animateColorAsState(
+        targetValue = if (isError) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = if (shouldAnimate) {
+            tween(
+                durationMillis = AnimationConstants.DURATION_NORMAL,
+                easing = AnimationConstants.EASING_STANDARD
+            )
+        } else {
+            AnimationConstants.tweenInstant()
+        },
+        label = "TextField icon color"
+    )
+
+    // Content description for accessibility
+    val contentDesc = if (isError) {
+        stringResource(R.string.cd_field_error)
+    } else {
+        stringResource(R.string.cd_field_valid)
+    }
+
+    Column(modifier = modifier.semantics { this.contentDescription = contentDesc }) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
@@ -72,7 +146,8 @@ fun AppTextField(
                 {
                     Icon(
                         imageVector = it,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = if (isError) iconColor else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },
@@ -82,13 +157,15 @@ fun AppTextField(
                         IconButton(onClick = onTrailingIconClick) {
                             Icon(
                                 imageVector = it,
-                                contentDescription = null
+                                contentDescription = null,
+                                tint = if (isError) iconColor else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } else {
                         Icon(
                             imageVector = it,
-                            contentDescription = null
+                            contentDescription = null,
+                            tint = if (isError) iconColor else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -114,13 +191,13 @@ fun AppTextField(
             maxLines = maxLines,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                unfocusedBorderColor = if (isError) errorBorderColor else MaterialTheme.colorScheme.outline,
                 focusedLabelColor = MaterialTheme.colorScheme.primary,
                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedLeadingIconColor = iconColor,
                 focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
-                unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedTrailingIconColor = iconColor,
                 errorBorderColor = MaterialTheme.colorScheme.error,
                 errorLabelColor = MaterialTheme.colorScheme.error,
                 errorLeadingIconColor = MaterialTheme.colorScheme.error,

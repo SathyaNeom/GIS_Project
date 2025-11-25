@@ -711,4 +711,34 @@
     <string name="progress_sync_downloading_changes">Downloading server changes…</string>
     <string name="progress_sync_finalizing_sync">Finalizing sync…</string>
     <string name="progress_sync_completed">Sync completed successfully!</string>
+
+    <!-- Animation Content Descriptions -->
+    <string name="cd_dialog_appearing">Dialog appearing</string>
+    <string name="cd_dialog_disappearing">Dialog disappearing</string>
+    <string name="cd_bottom_sheet_expanding">Bottom sheet expanding</string>
+    <string name="cd_bottom_sheet_collapsing">Bottom sheet collapsing</string>
+    <string name="cd_button_pressed">Button pressed</string>
+    <string name="cd_button_loading">Button loading</string>
+    <string name="cd_field_error">Field has error</string>
+    <string name="cd_field_valid">Field is valid</string>
+    <string name="cd_list_item_appearing">List item appearing</string>
+    <string name="cd_checkbox_checked">Checkbox checked</string>
+    <string name="cd_checkbox_unchecked">Checkbox unchecked</string>
+    <string name="cd_switch_on">Switch turned on</string>
+    <string name="cd_switch_off">Switch turned off</string>
+    <string name="cd_layer_visible">Layer is now visible</string>
+    <string name="cd_layer_hidden">Layer is now hidden</string>
+    <string name="cd_feature_selected">Feature selected on map</string>
+    <string name="cd_feature_deselected">Feature deselected</string>
+    <string name="cd_snackbar_appearing">Notification appearing</string>
+    <string name="cd_success_animation">Success animation</string>
+    <string name="cd_error_animation">Error animation</string>
+
+    <!-- Animation Logger Messages -->
+    <string name="log_animation_started">Animation started: %1$s</string>
+    <string name="log_animation_completed">Animation completed: %1$s</string>
+    <string name="log_animation_cancelled">Animation cancelled: %1$s</string>
+    <string name="log_animation_disabled_accessibility">Animations disabled due to accessibility settings</string>
+    <string name="log_animation_disabled_performance">Animations disabled due to device performance</string>
+    <string name="log_animation_reduced">Animation duration reduced for performance</string>
 </resources>
