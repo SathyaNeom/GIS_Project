@@ -4,6 +4,7 @@ import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.Basemap
 import com.arcgismaps.mapping.BasemapStyle
 import com.arcgismaps.mapping.layers.FeatureLayer
+import com.enbridge.gdsgpscollection.data.local.preferences.PreferencesManager
 import com.enbridge.gdsgpscollection.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,19 +26,27 @@ import javax.inject.Singleton
  * - Layer caching for performance (reduces recreation overhead by ~80%)
  * - Background thread processing (prevents ANR)
  * - Comprehensive error handling with state reversion
+ * - OSM visibility persistence across app sessions
  *
  * Architecture Pattern: Delegate + Cache Manager
  * - Delegates layer metadata to LayerManagerDelegate
  * - Uses LayerCacheManager for performance optimization
  * - Background processing via Dispatchers.Default
+ * - PreferencesManager for persisting user preferences
  *
  * Performance Improvements:
  * - First toggle: ~500ms (layer recreation + loading)
  * - Subsequent toggles: ~50ms (cached layers, 90% faster)
  * - Cache hit rate: >80% after first toggle
  *
+ * Default Behavior:
+ * - OSM basemap is HIDDEN by default (changed from visible)
+ * - User preference is persisted and restored on app restart
+ * - First-time users see guidance about enabling basemap
+ *
  * @property layerManager Layer manager providing metadata for recreation
  * @property layerCache Cache manager for optimizing repeated recreations
+ * @property preferencesManager Preferences manager for persisting user settings
  *
  * @author Sathya Narayanan
  * @since 1.0.0
@@ -45,10 +54,12 @@ import javax.inject.Singleton
 @Singleton
 class BasemapManagerDelegateImpl @Inject constructor(
     private val layerManager: LayerManagerDelegate,
-    private val layerCache: LayerCacheManager
+    private val layerCache: LayerCacheManager,
+    private val preferencesManager: PreferencesManager
 ) : BasemapManagerDelegate {
 
-    private val _osmVisible = MutableStateFlow(true)
+    // Default to false (hidden) - user preference will override during initialization
+    private val _osmVisible = MutableStateFlow(false)
     override val osmVisible: StateFlow<Boolean> = _osmVisible.asStateFlow()
 
     // Track ongoing recreation to prevent concurrent operations
@@ -147,7 +158,10 @@ class BasemapManagerDelegateImpl @Inject constructor(
                 _osmVisible.value = visible
             }
 
-            Logger.i(TAG, "Toggling OSM visibility to: $visible")
+            // Persist user preference
+            saveOsmVisibility(visible)
+
+            Logger.i(TAG, "Toggling OSM visibility to: $visible (persisted to preferences)")
 
             // Preserve current map state
             val currentViewpoint = currentMap.initialViewpoint
@@ -308,5 +322,31 @@ class BasemapManagerDelegateImpl @Inject constructor(
     override fun clearLayerCache() {
         layerCache.clearCache()
         Logger.d(TAG, "Layer cache cleared")
+    }
+
+    /**
+     * Initializes OSM visibility from persisted preference.
+     * Called during app initialization to restore user's last preference.
+     *
+     * Default behavior: OSM is hidden (false) unless user previously enabled it.
+     */
+    override fun initializeOsmVisibility() {
+        val savedVisibility = preferencesManager.getOsmVisibility()
+        _osmVisible.value = savedVisibility
+        Logger.i(
+            TAG,
+            "Initialized OSM visibility from preferences: $savedVisibility (default: false - hidden)"
+        )
+    }
+
+    /**
+     * Persists the current OSM visibility state to preferences.
+     * Called whenever user toggles OSM visibility in Table of Contents.
+     *
+     * @param visible The visibility state to save
+     */
+    override fun saveOsmVisibility(visible: Boolean) {
+        preferencesManager.saveOsmVisibility(visible)
+        Logger.d(TAG, "Saved OSM visibility preference: $visible")
     }
 }

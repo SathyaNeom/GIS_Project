@@ -652,6 +652,7 @@
     <string name="error_osm_toggle_failed">Failed to toggle basemap visibility</string>
     <string name="msg_clearing_geodatabase">Clearing geodatabase…</string>
     <string name="msg_loading_layers">Loading layers…</string>
+    <string name="msg_basemap_hidden_by_default">Basemap is hidden by default. Enable \"Open Street Map\" in Table of Contents for background context.</string>
 
     <!-- Layer Display Status -->
 

@@ -25,6 +25,8 @@ class PreferencesManager @Inject constructor(
     companion object {
         private const val PREFS_NAME = "electronic_services_prefs"
         private const val KEY_ES_DATA_DISTANCE = "es_data_distance"
+        private const val KEY_OSM_VISIBLE = "osm_basemap_visible"
+        private const val KEY_OSM_GUIDANCE_SHOWN = "osm_guidance_shown"
     }
 
     /**
@@ -42,5 +44,46 @@ class PreferencesManager @Inject constructor(
      */
     fun getESDataDistance(): Int {
         return sharedPreferences.getInt(KEY_ES_DATA_DISTANCE, 100)
+    }
+
+    /**
+     * Saves the OSM basemap visibility preference
+     *
+     * @param visible true to show basemap, false to hide
+     */
+    fun saveOsmVisibility(visible: Boolean) {
+        sharedPreferences.edit()
+            .putBoolean(KEY_OSM_VISIBLE, visible)
+            .apply()
+    }
+
+    /**
+     * Gets the OSM basemap visibility preference
+     * Returns default value of false (hidden by default) if not set
+     *
+     * @return true if basemap should be visible, false otherwise
+     */
+    fun getOsmVisibility(): Boolean {
+        return sharedPreferences.getBoolean(KEY_OSM_VISIBLE, false)
+    }
+
+    /**
+     * Saves whether the OSM guidance message has been shown to the user
+     *
+     * @param shown true if guidance has been displayed
+     */
+    fun setOsmGuidanceShown(shown: Boolean) {
+        sharedPreferences.edit()
+            .putBoolean(KEY_OSM_GUIDANCE_SHOWN, shown)
+            .apply()
+    }
+
+    /**
+     * Checks if the OSM guidance message has been shown to the user
+     *
+     * @return true if guidance has been shown before, false if first time
+     */
+    fun hasShownOsmGuidance(): Boolean {
+        return sharedPreferences.getBoolean(KEY_OSM_GUIDANCE_SHOWN, false)
     }
 }

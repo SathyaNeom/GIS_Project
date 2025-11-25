@@ -72,4 +72,17 @@ interface BasemapManagerDelegate {
      * Should be called when geodatabase is deleted or reloaded.
      */
     fun clearLayerCache()
+
+    /**
+     * Initializes OSM visibility from persisted preference.
+     * Should be called during app initialization.
+     */
+    fun initializeOsmVisibility()
+
+    /**
+     * Persists the current OSM visibility state to preferences.
+     *
+     * @param visible The visibility state to save
+     */
+    fun saveOsmVisibility(visible: Boolean)
 }

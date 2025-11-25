@@ -223,6 +223,18 @@ fun MainMapScreen(
         }
     }
 
+    // Show first-time guidance about hidden basemap
+    LaunchedEffect(Unit) {
+        // Check if OSM guidance has been shown before
+        if (mainMapViewModel.shouldShowOsmGuidance()) {
+            snackbarHostState.showSnackbar(
+                context.getString(com.enbridge.gdsgpscollection.R.string.msg_basemap_hidden_by_default)
+            )
+            // Mark guidance as shown
+            mainMapViewModel.markOsmGuidanceShown()
+        }
+    }
+
     // Handle target viewpoint changes for distance-based zoom with smooth animation
     LaunchedEffect(targetViewpoint) {
         targetViewpoint?.let { viewpoint ->

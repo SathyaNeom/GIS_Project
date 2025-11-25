@@ -14,6 +14,7 @@ import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.BasemapStyle
 import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.mapping.layers.FeatureLayer
+import com.enbridge.gdsgpscollection.data.local.preferences.PreferencesManager
 import com.enbridge.gdsgpscollection.domain.config.LocationFeatureFlags
 import com.enbridge.gdsgpscollection.domain.entity.ESDataDistance
 import com.enbridge.gdsgpscollection.domain.entity.GeometryType
@@ -109,7 +110,8 @@ class MainMapViewModel @Inject constructor(
     private val locationManager: LocationManagerDelegate,
     private val getSelectedDistanceUseCase: GetSelectedDistanceUseCase,
     private val featureFlags: LocationFeatureFlags,
-    private val geodatabaseMigrationHelper: GeodatabaseMigrationHelper
+    private val geodatabaseMigrationHelper: GeodatabaseMigrationHelper,
+    private val preferencesManager: PreferencesManager
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -174,15 +176,31 @@ class MainMapViewModel @Inject constructor(
         // Perform migration if needed for backward compatibility
         geodatabaseMigrationHelper.checkAndMigrate()
 
+        // Initialize OSM visibility from persisted preference
+        // This must be called before creating the initial map to ensure correct basemap state
+        basemapManager.initializeOsmVisibility()
+        Logger.d(TAG, "OSM visibility initialized from preferences")
+
         networkConnectivity.startObserving()
         checkAndLoadExistingGeodatabase()
     }
 
     /**
-     * Creates the initial ArcGIS Map with San Francisco viewpoint
+     * Creates the initial ArcGIS Map with San Francisco viewpoint.
+     *
+     * Default Behavior (Changed):
+     * - OSM basemap is HIDDEN by default (no basemap parameter)
+     * - Only operational layers (from geodatabase) are visible initially
+     * - Users can enable basemap via "Open Street Map" checkbox in Table of Contents
+     * - User preference is persisted and restored on subsequent app launches
+     *
+     * This provides a cleaner initial map view focused on feature data,
+     * with optional basemap context available when needed.
      */
     private fun createInitialMap(): ArcGISMap {
-        return ArcGISMap(basemapManager.currentBasemapStyle).apply {
+        // Create map WITHOUT basemap by default (OSM hidden)
+        // BasemapManager will handle adding basemap if user preference indicates visibility
+        return ArcGISMap().apply {
             initialViewpoint = Viewpoint(
                 center = Point(
                     Constants.SanFrancisco.CENTER_X,
@@ -860,6 +878,25 @@ class MainMapViewModel @Inject constructor(
      */
     fun setAutoPanMode(mode: com.arcgismaps.location.LocationDisplayAutoPanMode) {
         locationManager.setAutoPanMode(mode)
+    }
+
+    /**
+     * Checks if the OSM basemap guidance should be shown to the user.
+     * Returns true if this is the first time, false if already shown.
+     *
+     * @return true if guidance should be displayed, false otherwise
+     */
+    fun shouldShowOsmGuidance(): Boolean {
+        return !preferencesManager.hasShownOsmGuidance()
+    }
+
+    /**
+     * Marks the OSM basemap guidance as shown.
+     * Prevents the guidance from appearing on subsequent app launches.
+     */
+    fun markOsmGuidanceShown() {
+        preferencesManager.setOsmGuidanceShown(true)
+        Logger.d(TAG, "OSM guidance marked as shown")
     }
 
     /**
