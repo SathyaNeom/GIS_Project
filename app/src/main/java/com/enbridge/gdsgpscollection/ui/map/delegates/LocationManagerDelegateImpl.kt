@@ -180,6 +180,27 @@ class LocationManagerDelegateImpl @Inject constructor(
             )
 
     /**
+     * Private mutable state for GPS accuracy tracking.
+     * Updated via updateCurrentAccuracy() when location data changes.
+     */
+    private val _currentAccuracy = MutableStateFlow<Float?>(null)
+
+    /**
+     * Public read-only StateFlow exposing GPS horizontal accuracy.
+     *
+     * Current Implementation:
+     * - Sourced from ArcGIS Location.horizontalAccuracy property
+     * - Updated in MainMapScreen when locationDisplay.location emits
+     * - Null indicates accuracy unavailable (no GPS fix yet)
+     *
+     * Future Enhancement:
+     * When external GNSS is integrated, this will continue to work seamlessly
+     * because NmeaLocationDataSource also populates Location.horizontalAccuracy.
+     * We'll additionally expose richer metadata via a new gnssMetadata flow.
+     */
+    override val currentAccuracy: StateFlow<Float?> = _currentAccuracy.asStateFlow()
+
+    /**
      * Creates a LocationDataSource based on feature flag configuration.
      *
      * ## Configuration Behavior:
@@ -297,6 +318,35 @@ class LocationManagerDelegateImpl @Inject constructor(
 //            Logger.v(TAG, "Current location updated: (${location.x}, ${location.y})")
         } else {
 //            Logger.v(TAG, "Current location cleared (null)")
+        }
+    }
+
+    /**
+     * Updates the current GPS accuracy value.
+     *
+     * This method receives accuracy data from the ArcGIS LocationDisplay.location Flow,
+     * which is collected in MainMapScreen. The accuracy represents horizontal positioning
+     * error in meters.
+     *
+     * Implementation Note:
+     * The ArcGIS Location object provides horizontalAccuracy as a Double, which we
+     * convert to Float for consistency with typical accuracy representations (meters).
+     *
+     * Future Compatibility:
+     * When external GNSS receivers are integrated via NmeaLocationDataSource, this
+     * method will continue to function identically because the ArcGIS SDK automatically
+     * populates Location.horizontalAccuracy from parsed NMEA sentences ($GPGGA contains
+     * HDOP-derived accuracy). Additional GNSS metadata (DOP values, fix quality, etc.)
+     * will be exposed through a separate gnssMetadata flow.
+     *
+     * @param accuracy Horizontal accuracy in meters, or null if unavailable
+     */
+    override fun updateCurrentAccuracy(accuracy: Float?) {
+        _currentAccuracy.value = accuracy
+        if (accuracy != null) {
+            Logger.v(TAG, "GPS accuracy updated: ${accuracy}m")
+        } else {
+            Logger.v(TAG, "GPS accuracy unavailable (null)")
         }
     }
 }

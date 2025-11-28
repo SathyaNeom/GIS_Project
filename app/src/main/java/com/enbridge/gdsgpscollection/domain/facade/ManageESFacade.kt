@@ -192,4 +192,36 @@ interface ManageESFacade {
      * ```
      */
     suspend fun hasUnsyncedChanges(): Result<Boolean>
+
+    // ========== PRE-FLIGHT CHECK METHODS (Project Environment) ==========
+
+    /**
+     * Returns the count of geodatabase files in the download directory.
+     *
+     * Used for Project environment pre-flight checks to determine download strategy.
+     * See repository documentation for detailed rationale.
+     *
+     * @return Count of geodatabase files
+     */
+    suspend fun getGeodatabaseFileCount(): Int
+
+    /**
+     * Checks if existing geodatabases contain actual feature data.
+     *
+     * Detects "No Data" scenario where files exist but are empty.
+     * See repository documentation for detailed rationale.
+     *
+     * @return Result<Boolean> - true if data exists, false if empty
+     */
+    suspend fun hasDataToLoad(): Result<Boolean>
+
+    /**
+     * Clears all geodatabase files silently (no UI notifications).
+     *
+     * Used for automatic cleanup after "No Data" errors or corrupted states.
+     * See repository documentation for detailed rationale.
+     *
+     * @return Result<Int> - Count of deleted files
+     */
+    suspend fun clearGeodatabases(): Result<Int>
 }

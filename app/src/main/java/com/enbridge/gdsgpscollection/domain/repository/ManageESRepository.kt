@@ -279,4 +279,108 @@ interface ManageESRepository {
      * ```
      */
     suspend fun hasUnsyncedChanges(): Result<Boolean>
+
+    // ========== PRE-FLIGHT CHECK METHODS (Project Environment) ==========
+
+    /**
+     * Returns the count of geodatabase files currently in the download directory.
+     *
+     * ## Purpose:
+     * Used for pre-flight checks in Project environment to determine download strategy:
+     * - 0 files: Direct download (no existing data)
+     * - 1 file: Direct download (replace single file)
+     * - >1 files: Check data content before deciding
+     *
+     * ## Implementation Strategy:
+     * Only counts files matching configured service IDs to avoid counting:
+     * - Temporary files
+     * - Backup files
+     * - Files from previous environment configurations
+     *
+     * ## File Naming Convention:
+     * Geodatabase files follow pattern: `{serviceId}.geodatabase`
+     * - Project environment: `operations.geodatabase`, `basemap.geodatabase`
+     * - Wildfire environment: `wildfire.geodatabase`
+     *
+     * ## Rationale for File Counting:
+     * File count drives decision logic in Get Data workflow:
+     * - Low count (0-1): Simple case, download directly
+     * - High count (>1): Requires data validation (may be empty files from failed downloads)
+     *
+     * This prevents unnecessary internet checks when data state is clear.
+     *
+     * @return Count of geodatabase files (0 or positive integer)
+     */
+    suspend fun getGeodatabaseFileCount(): Int
+
+    /**
+     * Checks if existing geodatabases contain actual feature data.
+     *
+     * ## Purpose:
+     * Detects "No Data" scenario where geodatabase files exist but are empty:
+     * - Downloaded successfully but server returned no features
+     * - Download interrupted after file creation but before data write
+     * - Extent/filter resulted in zero features
+     *
+     * ## Implementation Strategy:
+     * 1. Load all existing geodatabases
+     * 2. For each geodatabase, check all feature tables
+     * 3. Query feature count using `table.queryFeatureCount()`
+     * 4. Return true if ANY table in ANY geodatabase has features
+     * 5. Return false if ALL tables in ALL geodatabases are empty
+     *
+     * ## Rationale for Data Validation:
+     * Empty geodatabases are functionally useless and indicate:
+     * - Server-side issues (no data in selected extent)
+     * - Incorrect extent selection (no features in area)
+     * - Network interruption during download
+     *
+     * Early detection allows immediate retry without manual investigation.
+     *
+     * ## Performance Consideration:
+     * Uses `queryFeatureCount()` instead of loading all features, providing
+     * fast O(1) check via geodatabase metadata rather than O(n) data scan.
+     *
+     * @return Result<Boolean> - true if data exists, false if all geodatabases empty
+     *
+     * Example:
+     * ```kotlin
+     * hasDataToLoad().onSuccess { hasData ->
+     *     if (!hasData) {
+     *         // Show "No Data" error dialog
+     *         // Trigger silent clear of empty files
+     *     }
+     * }
+     * ```
+     */
+    suspend fun hasDataToLoad(): Result<Boolean>
+
+    /**
+     * Clears all geodatabase files from internal storage (silent operation).
+     *
+     * ## Purpose:
+     * Performs geodatabase deletion without UI notifications, used for:
+     * - Automatic cleanup after "No Data" error
+     * - Silent recovery from corrupted file states
+     * - Background cleanup operations
+     *
+     * ## Difference from User-Initiated Clear:
+     * - User Clear: Shows "Files deleted" Snackbar + confirmation dialog
+     * - Silent Clear: No UI feedback, automatic operation
+     *
+     * ## Implementation Strategy:
+     * 1. List all geodatabase files in directory
+     * 2. Close any open geodatabase connections
+     * 3. Delete files from file system
+     * 4. Return count of deleted files
+     * 5. Log operations but suppress UI notifications
+     *
+     * ## Use Cases:
+     * - NoData Dialog: User clicks OK → silently remove empty files
+     * - Corrupted File Recovery: Automatic cleanup before retry
+     * - Environment Switch: Clean old files before new download
+     *
+     * @return Result<Int> - Count of files deleted
+     */
+    suspend fun clearGeodatabases(): Result<Int>
 }

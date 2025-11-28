@@ -402,6 +402,15 @@ Before Production Release:
     - Testing patterns and best practices
     - CI/CD integration examples
 
+- **[docs/GPS_ACCURACY_IMPLEMENTATION.md](docs/GPS_ACCURACY_IMPLEMENTATION.md)** - GPS accuracy
+  tracking implementation
+    - Location accuracy monitoring system
+    - Pre-flight validation checks (6-step workflow)
+    - Type-safe dialog management (sealed class pattern)
+    - Post-download validation ("No Data", corrupted files)
+    - Future GNSS/NMEA integration architecture
+    - Comprehensive testing strategy
+
 - **[docs/ARCHITECTURE_REFACTORING_SUMMARY.md](docs/ARCHITECTURE_REFACTORING_SUMMARY.md)** -
   Architecture refactoring documentation
     - Motivation and objectives
@@ -619,6 +628,30 @@ When contributing to this project:
 - **Use Case Implementation**: `CheckUnsyncedChangesUseCase` for business logic isolation
 - **Comprehensive Testing**: Unit, integration, and UI tests for all scenarios
 - **Detailed Documentation**: Complete implementation guide in ARCHITECTURE.md (Scenario 4)
+
+### GPS Accuracy Tracking & Pre-Flight Checks (November 2025)
+
+- **GPS Accuracy Monitoring**: Real-time horizontal accuracy tracking via ArcGIS Location
+- **7-Meter Threshold**: Carefully chosen threshold with detailed environmental rationale
+- **Pre-Flight Validation** (Project Environment Only):
+    - GPS longitude validation
+    - GPS accuracy check (7m threshold)
+    - File count analysis (0, 1, or >1 files)
+    - Data content validation (empty geodatabase detection)
+    - Unsaved changes detection
+    - Internet connectivity verification
+- **Type-Safe Dialog Management**: Sealed class pattern replacing boolean flags
+- **Post-Download Validation**:
+    - "No Data" detection with automatic silent cleanup
+    - Corrupted file detection with admin contact dialog
+- **Repository Methods**: `getGeodatabaseFileCount()`, `hasDataToLoad()`, `clearGeodatabases()`
+- **Future-Proof Architecture**: Documented path for external GNSS/NMEA integration
+    - Adaptive thresholds: RTK (2m), DGPS (5m), GPS (7m)
+    - Rich metadata: HDOP, VDOP, PDOP, fix quality, satellite count
+- **Environment-Specific**: Complex checks for Project, simple flow for Wildfire
+- **Comprehensive Logging**: Every decision point logged with ✓/✗ indicators
+- **Detailed Documentation**: Complete guide
+  in [docs/GPS_ACCURACY_IMPLEMENTATION.md](docs/GPS_ACCURACY_IMPLEMENTATION.md)
 
 ### Release Readiness (November 2025)
 

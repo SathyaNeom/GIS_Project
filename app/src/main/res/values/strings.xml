@@ -681,6 +681,24 @@
     <string name="filter_center_viewport">Filter center: Viewport</string>
     <string name="filter_center_location">Filter center: Your location</string>
 
+    <!-- GPS Pre-flight Check Errors -->
+    <string name="error_gps_longitude_invalid">GPS location unavailable. Please wait for GPS fix.</string>
+    <string name="error_gps_accuracy_low">GPS accuracy too low (%1$sm). Required: 7m.</string>
+    <string name="error_no_internet_connection">No internet connection. Please check your network.</string>
+
+    <!-- Manage ES Dialogs - Proceed/Cancel (Unsaved Changes) -->
+    <string name="dialog_proceed_cancel_title">Unsaved Changes</string>
+    <string name="dialog_proceed_cancel_message">You have unsaved edits. Proceeding will replace existing data. Continue?</string>
+    <string name="dialog_proceed">Proceed</string>
+
+    <!-- Manage ES Dialogs - No Data Error -->
+    <string name="dialog_no_data_title">Error</string>
+    <string name="dialog_no_data_message">Error in loading map. Get data again to download map from Manage edits.</string>
+
+    <!-- Manage ES Dialogs - Corrupted File Error -->
+    <string name="dialog_corrupted_file_title">Error</string>
+    <string name="dialog_corrupted_file_message">Error in loading map. Please contact your administrator!</string>
+
     <!-- Sync Warning Dialogs -->
     <string name="dialog_sync_warning_title">Unsaved Changes Detected</string>
     <string name="dialog_sync_warning_message">You have unsaved changes that must be synced to the server before downloading new data.\n\nClick "Sync &amp; Continue" to upload your changes first.</string>

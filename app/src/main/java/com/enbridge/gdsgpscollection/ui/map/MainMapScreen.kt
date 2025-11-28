@@ -262,6 +262,11 @@ fun MainMapScreen(
         // Extract Point from Location and update ViewModel
         val locationPoint = currentLocationValue?.position
         mainMapViewModel.updateCurrentLocation(locationPoint)
+
+        // Extract horizontal accuracy and update ViewModel
+        // ArcGIS Location.horizontalAccuracy is Double?, convert to Float? for consistency
+        val accuracy = currentLocationValue?.horizontalAccuracy?.toFloat()
+        mainMapViewModel.updateCurrentAccuracy(accuracy)
     }
 
     GdsGpsCollectionTheme {

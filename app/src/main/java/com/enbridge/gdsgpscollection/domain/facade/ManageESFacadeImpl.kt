@@ -59,7 +59,8 @@ class ManageESFacadeImpl @Inject constructor(
     private val deleteJobCardsUseCase: DeleteJobCardsUseCase,
     private val getSelectedDistanceUseCase: GetSelectedDistanceUseCase,
     private val saveSelectedDistanceUseCase: SaveSelectedDistanceUseCase,
-    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase
+    private val checkUnsyncedChangesUseCase: CheckUnsyncedChangesUseCase,
+    private val manageESRepository: com.enbridge.gdsgpscollection.domain.repository.ManageESRepository
 ) : ManageESFacade {
 
     companion object {
@@ -128,5 +129,23 @@ class ManageESFacadeImpl @Inject constructor(
     override suspend fun hasUnsyncedChanges(): Result<Boolean> {
         Logger.d(TAG, "hasUnsyncedChanges called - checking for local edits")
         return checkUnsyncedChangesUseCase()
+    }
+
+    // ========== PRE-FLIGHT CHECK METHOD IMPLEMENTATIONS ==========
+
+    override suspend fun getGeodatabaseFileCount(): Int {
+        Logger.d(TAG, "getGeodatabaseFileCount called")
+        // Direct repository call (no use case needed for simple query)
+        return manageESRepository.getGeodatabaseFileCount()
+    }
+
+    override suspend fun hasDataToLoad(): Result<Boolean> {
+        Logger.d(TAG, "hasDataToLoad called - checking for feature data")
+        return manageESRepository.hasDataToLoad()
+    }
+
+    override suspend fun clearGeodatabases(): Result<Int> {
+        Logger.d(TAG, "clearGeodatabases called - performing silent clear")
+        return manageESRepository.clearGeodatabases()
     }
 }

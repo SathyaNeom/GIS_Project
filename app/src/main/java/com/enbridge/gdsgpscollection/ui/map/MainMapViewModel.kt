@@ -961,6 +961,46 @@ class MainMapViewModel @Inject constructor(
         locationManager.updateCurrentLocation(location)
     }
 
+    /**
+     * Updates the current GPS accuracy value.
+     *
+     * This should be called by the UI layer when location updates are received from
+     * ArcGIS LocationDisplay, extracting the horizontalAccuracy property from the
+     * Location object.
+     *
+     * ## Current Implementation (Phase 1):
+     * Receives accuracy from ArcGIS Location.horizontalAccuracy, which provides
+     * standard GPS accuracy values (typically 5-15 meters for consumer devices).
+     * This is sufficient for basic pre-flight checks in ManageES feature.
+     *
+     * ## Usage Example:
+     * ```kotlin
+     * // MainMapScreen.kt
+     * locationDisplay.location.collect { location ->
+     *     val accuracy = location?.horizontalAccuracy?.toFloat()
+     *     mainMapViewModel.updateCurrentAccuracy(accuracy)
+     * }
+     * ```
+     *
+     * ## Future Enhancement: External GNSS (Phase 2):
+     * When external GNSS receivers are integrated via NmeaLocationDataSource:
+     * - This method will continue to function identically
+     * - ArcGIS SDK automatically populates Location.horizontalAccuracy from NMEA $GPGGA sentence
+     * - Additional GNSS metadata (DOP values, fix quality, satellite count) will be
+     *   exposed through a separate gnssMetadata flow for advanced use cases
+     * - This ensures backward compatibility while enabling richer data for components
+     *   that need it
+     *
+     * The phased approach allows immediate GPS accuracy checks without blocking on
+     * external hardware integration, while preserving architectural flexibility for
+     * future enhancements.
+     *
+     * @param accuracy Horizontal accuracy in meters, or null if unavailable
+     */
+    fun updateCurrentAccuracy(accuracy: Float?) {
+        locationManager.updateCurrentAccuracy(accuracy)
+    }
+
     override fun onCleared() {
         super.onCleared()
 

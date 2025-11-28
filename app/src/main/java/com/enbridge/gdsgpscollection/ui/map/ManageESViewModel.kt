@@ -81,6 +81,45 @@ class ManageESViewModel @Inject constructor(
     val currentLocation: StateFlow<Point?> = locationManager.currentLocation
 
     /**
+     * StateFlow containing current GPS horizontal accuracy in meters.
+     *
+     * ## Current Implementation (Phase 1):
+     * Sources accuracy from ArcGIS Location.horizontalAccuracy, providing standard GPS
+     * accuracy values (typically 5-15 meters). This is used for pre-flight checks before
+     * downloading geodatabase data in Project environment.
+     *
+     * ## Rationale for Accuracy Checks:
+     * GPS accuracy validation ensures data quality by:
+     * - Preventing downloads when position uncertainty is high
+     * - Ensuring features are downloaded for the correct geographic area
+     * - Reducing data integrity issues from inaccurate location fixes
+     * - Meeting operational requirements for field data collection
+     *
+     * ## Accuracy Threshold:
+     * MIN_REQUIRED_ACCURACY = 7.0 meters chosen because:
+     * - Typical consumer GPS: 5-15m accuracy
+     * - DGPS systems: 1-5m accuracy
+     * - 7m provides reasonable balance between accessibility and precision
+     * - Suitable for most utility infrastructure mapping (poles, lines, equipment)
+     *
+     * ## Future Enhancement: External GNSS (Phase 2):
+     * When external GNSS receivers are integrated:
+     * - This flow will continue to provide horizontalAccuracy from Location
+     * - Additional metadata (DOP values, fix quality, satellite count) available via
+     *   separate gnssMetadata flow
+     * - Adaptive thresholds based on fix quality:
+     *   * RTK Fixed: 2m threshold (cm-level accuracy)
+     *   * DGPS: 5m threshold (sub-meter accuracy)
+     *   * Standard GPS: 7m threshold (meter-level accuracy)
+     * - UI can display rich accuracy indicators (signal bars, satellite view)
+     *
+     * This phased approach allows immediate GPS validation without blocking on
+     * external hardware, while maintaining architectural flexibility for future
+     * enhancements.
+     */
+    val currentAccuracy: StateFlow<Float?> = locationManager.currentAccuracy
+
+    /**
      * StateFlow indicating whether "Get Data" button should be enabled.
      *
      * Enabled when:
@@ -119,6 +158,39 @@ class ManageESViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "ManageESViewModel"
+
+        /**
+         * Minimum required GPS horizontal accuracy in meters for data download.
+         *
+         * ## Rationale for 7.0 meters:
+         * This threshold balances operational requirements with GPS capabilities:
+         *
+         * **Consumer GPS Performance:**
+         * - Standard smartphones: 5-15m typical accuracy
+         * - Consumer GPS receivers: 3-10m typical accuracy
+         * - 7m is achievable by most devices in good conditions
+         *
+         * **Use Case Requirements:**
+         * - Utility infrastructure mapping (poles, transformers, lines)
+         * - Asset location accuracy sufficient for field operations
+         * - Prevents downloads with poor GPS fixes (>10m error)
+         *
+         * **Environmental Factors:**
+         * - Open sky: 3-5m accuracy possible
+         * - Urban canyon: 10-20m accuracy degradation
+         * - Forest canopy: 15-30m accuracy degradation
+         * - 7m threshold filters out worst-case scenarios
+         *
+         * **Future Adaptive Thresholds (Phase 2):**
+         * When external GNSS with RTK/DGPS is integrated, thresholds will adapt:
+         * - RTK Fixed: 2.0m (centimeter-level positioning)
+         * - DGPS: 5.0m (sub-meter positioning)
+         * - Standard GPS: 7.0m (meter-level positioning)
+         *
+         * This allows stricter requirements when better equipment is available,
+         * while maintaining accessibility for standard GPS operations.
+         */
+        const val MIN_REQUIRED_ACCURACY = 7.0f
     }
 
     init {
@@ -195,8 +267,24 @@ class ManageESViewModel @Inject constructor(
      * Handles "Get Data" button click - automatically selects single or multi-service download
      * based on current environment configuration.
      *
-     * Calculates the download extent based on the selected distance and center point,
-     * ensuring features are limited to a buffered area around the user's location.
+     * ## Workflow Overview:
+     * 1. **Environment Detection**: Determines if Project or Wildfire environment
+     * 2. **Pre-flight Checks**: Project environment only - validates GPS, files, data, changes
+     * 3. **Extent Calculation**: Computes download area based on distance and location
+     * 4. **Download Execution**: Routes to appropriate download method
+     * 5. **Post-download Validation**: Checks for "No Data" scenario
+     *
+     * ## Project Environment Pre-flight Checks:
+     * - GPS longitude validation
+     * - GPS accuracy threshold (7m)
+     * - File count analysis
+     * - Data content validation
+     * - Unsaved changes detection
+     * - Internet connectivity
+     *
+     * ## Wildfire Environment:
+     * - Simplified flow (existing logic)
+     * - No complex pre-flight checks
      *
      * Marks the extent change as committed, preventing viewpoint restoration on dismiss.
      *
@@ -230,12 +318,38 @@ class ManageESViewModel @Inject constructor(
         Logger.d(TAG, "Map extent change committed via Get Data action")
 
         viewModelScope.launch {
+            // ========== ENVIRONMENT DETECTION ==========
+            val environment = configuration.getCurrentEnvironment()
+            val isProjectEnvironment =
+                environment is com.enbridge.gdsgpscollection.domain.config.AppEnvironment.Project
+
+            Logger.i(
+                TAG,
+                "Environment detected: ${if (isProjectEnvironment) "Project" else "Wildfire"}"
+            )
+
+            // ========== PROJECT ENVIRONMENT: COMPREHENSIVE PRE-FLIGHT CHECKS ==========
+            if (isProjectEnvironment) {
+                Logger.d(TAG, "Performing Project environment pre-flight checks...")
+
+                val checksPass = performPreFlightChecks()
+
+                if (!checksPass) {
+                    Logger.w(TAG, "Pre-flight checks failed - aborting download")
+                    return@launch
+                }
+
+                Logger.i(TAG, "✓ All pre-flight checks passed - proceeding with download")
+            } else {
+                Logger.d(TAG, "Wildfire environment - skipping complex pre-flight checks")
+            }
+
+            // ========== EXTENT CALCULATION ==========
             Logger.d(
                 TAG,
                 "Calculating extent for distance=${selectedDistance.displayText}, centerPoint=(${centerPoint.x}, ${centerPoint.y})"
             )
 
-            // Calculate extent based on distance and center point
             val extent = extentManager.calculateExtentForDistance(selectedDistance, centerPoint)
 
             if (extent == null) {
@@ -252,12 +366,12 @@ class ManageESViewModel @Inject constructor(
                         "xMin=${extent.xMin.toInt()}, yMin=${extent.yMin.toInt()}, xMax=${extent.xMax.toInt()}, yMax=${extent.yMax.toInt()}"
             )
 
-            val environment = configuration.getCurrentEnvironment()
+            // ========== DOWNLOAD EXECUTION ==========
             val isMultiService = environment.featureServices.size > 1
 
             Logger.i(
                 TAG,
-                "Get Data clicked - Environment: ${if (isMultiService) "Multi-Service" else "Single-Service"}"
+                "Executing download - Type: ${if (isMultiService) "Multi-Service" else "Single-Service"}"
             )
 
             if (isMultiService) {
@@ -328,14 +442,53 @@ class ManageESViewModel @Inject constructor(
                     if (progress.isComplete && !progress.hasError) {
                         Logger.i(TAG, "Multi-service download completed successfully")
 
+                        // ========== POST-DOWNLOAD VALIDATION: Check for "No Data" ==========
+                        Logger.d(TAG, "Validating downloaded geodatabases contain data...")
+
+                        val hasDataResult = manageESFacade.hasDataToLoad()
+                        val hasData =
+                            hasDataResult.getOrElse { true } // Assume true on error (safe default)
+
+                        if (!hasData) {
+                            Logger.e(
+                                TAG,
+                                "Downloaded geodatabases are empty - showing No Data dialog"
+                            )
+
+                            _uiState.update {
+                                it.copy(
+                                    isDownloadInProgress = false,
+                                    isMultiServiceDownload = false,
+                                    multiServiceProgress = null
+                                )
+                            }
+
+                            // Show No Data dialog (user clicking OK will trigger silent clear)
+                            showNoDataDialog()
+                            return@collect
+                        }
+
+                        Logger.d(TAG, "✓ Data validation passed - geodatabases contain features")
+
                         // Load all geodatabases and pass to callback
                         val result = manageESFacade.loadAllGeodatabases()
                         result.onSuccess { geodatabaseInfos ->
                             Logger.d(TAG, "Loaded ${geodatabaseInfos.size} geodatabases")
-                            onGeodatabasesDownloaded(geodatabaseInfos)
-                            onSaveTimestamp()
+
+                            // Wrap in try-catch to detect corrupted files during loading
+                            try {
+                                onGeodatabasesDownloaded(geodatabaseInfos)
+                                onSaveTimestamp()
+                            } catch (e: Exception) {
+                                Logger.e(TAG, "Error loading geodatabases - possibly corrupted", e)
+                                showCorruptedFileDialog()
+                                return@onSuccess
+                            }
                         }.onFailure { error ->
                             Logger.e(TAG, "Failed to load geodatabases after download", error)
+
+                            // Show corrupted file dialog for any load failure
+                            showCorruptedFileDialog()
                         }
 
                         // Reload changed data
@@ -439,6 +592,39 @@ class ManageESViewModel @Inject constructor(
                                     "Geodatabase loaded: ${geodatabase.featureTables.size} tables"
                                 )
 
+                                // ========== POST-DOWNLOAD VALIDATION: Check for "No Data" (Wildfire) ==========
+                                // Note: For Wildfire (single-service), this is optional but provides
+                                // consistent error handling across environments
+                                Logger.d(TAG, "Validating geodatabase contains data...")
+
+                                val hasDataResult = manageESFacade.hasDataToLoad()
+                                val hasData =
+                                    hasDataResult.getOrElse { true } // Assume true on error
+
+                                if (!hasData) {
+                                    Logger.e(
+                                        TAG,
+                                        "Downloaded geodatabase is empty - showing No Data dialog"
+                                    )
+
+                                    _uiState.update {
+                                        it.copy(
+                                            isDownloadInProgress = false,
+                                            isDownloading = false,
+                                            downloadProgress = 0f,
+                                            downloadMessage = ""
+                                        )
+                                    }
+
+                                    showNoDataDialog()
+                                    return@onSuccess
+                                }
+
+                                Logger.d(
+                                    TAG,
+                                    "✓ Data validation passed - geodatabase contains features"
+                                )
+
                                 // Wrap single geodatabase in list for consistent callback
                                 val geodatabaseInfo = GeodatabaseInfo(
                                     serviceId = "wildfire",
@@ -455,20 +641,37 @@ class ManageESViewModel @Inject constructor(
                                     TAG,
                                     "Notifying geodatabase downloaded with ${geodatabaseInfo.layerCount} layers"
                                 )
-                                onGeodatabasesDownloaded(listOf(geodatabaseInfo))
-                                onSaveTimestamp()
 
-                                // Reload changed data after download
-                                loadChangedData()
+                                // Wrap in try-catch to detect corrupted files
+                                try {
+                                    onGeodatabasesDownloaded(listOf(geodatabaseInfo))
+                                    onSaveTimestamp()
 
-                                _uiState.update { it.copy(isDownloadInProgress = false) }
+                                    // Reload changed data after download
+                                    loadChangedData()
+
+                                    _uiState.update { it.copy(isDownloadInProgress = false) }
+                                } catch (e: Exception) {
+                                    Logger.e(
+                                        TAG,
+                                        "Error loading geodatabase - possibly corrupted",
+                                        e
+                                    )
+                                    showCorruptedFileDialog()
+                                    _uiState.update {
+                                        it.copy(
+                                            isDownloadInProgress = false,
+                                            isDownloading = false
+                                        )
+                                    }
+                                }
                             }.onFailure { error ->
                                 Logger.e(TAG, "Failed to load geodatabase", error)
+                                showCorruptedFileDialog()
                                 _uiState.update {
                                     it.copy(
                                         isDownloadInProgress = false,
-                                        isDownloading = false,
-                                        downloadError = "Failed to load geodatabase: ${error.message}"
+                                        isDownloading = false
                                     )
                                 }
                             }
@@ -875,6 +1078,227 @@ class ManageESViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Performs comprehensive pre-flight checks for Project environment before download.
+     *
+     * Implements the complete decision tree:
+     * 1. GPS Longitude validation
+     * 2. GPS Accuracy validation (MIN_REQUIRED_ACCURACY)
+     * 3. File count check
+     * 4. Data validation (for existing files)
+     * 5. Unsaved changes check
+     * 6. Internet connectivity check
+     *
+     * @return true if all checks pass and download can proceed, false otherwise
+     */
+    private suspend fun performPreFlightChecks(): Boolean {
+        Logger.i(TAG, "Starting pre-flight checks for Project environment")
+
+        // ========== CHECK 1: GPS Longitude ==========
+        val location = currentLocation.value
+        if (location == null || location.x == 0.0) {
+            Logger.e(
+                TAG,
+                "Pre-flight check failed: GPS longitude invalid (${location?.x ?: "null"})"
+            )
+            _uiState.update {
+                it.copy(downloadError = "GPS location unavailable. Please wait for GPS fix.")
+            }
+            return false
+        }
+        Logger.d(TAG, "✓ GPS Longitude check passed: ${location.x}")
+
+        // ========== CHECK 2: GPS Accuracy ==========
+        val accuracy = currentAccuracy.value
+        if (accuracy == null || accuracy > MIN_REQUIRED_ACCURACY) {
+            val accuracyStr = accuracy?.let { String.format("%.1f", it) } ?: "N/A"
+            Logger.e(
+                TAG,
+                "Pre-flight check failed: GPS accuracy too low ($accuracyStr m > $MIN_REQUIRED_ACCURACY m)"
+            )
+            _uiState.update {
+                it.copy(downloadError = "GPS accuracy too low (${accuracyStr}m). Required: ${MIN_REQUIRED_ACCURACY}m.")
+            }
+            return false
+        }
+        Logger.d(
+            TAG,
+            "✓ GPS Accuracy check passed: ${accuracy}m (threshold: ${MIN_REQUIRED_ACCURACY}m)"
+        )
+
+        // ========== CHECK 3: File Count & Data Validation ==========
+        val fileCount = manageESFacade.getGeodatabaseFileCount()
+        Logger.d(TAG, "Geodatabase file count: $fileCount")
+
+        when {
+            fileCount == 0 -> {
+                Logger.d(TAG, "No existing files - will proceed directly to download")
+                return checkInternetConnectivity()
+            }
+
+            fileCount == 1 -> {
+                Logger.d(TAG, "Single file exists - will replace with new download")
+                return checkInternetConnectivity()
+            }
+
+            fileCount > 1 -> {
+                Logger.d(TAG, "Multiple files exist - checking for data...")
+
+                // Check if files contain actual data
+                val hasDataResult = manageESFacade.hasDataToLoad()
+                val hasData = hasDataResult.getOrElse { false }
+
+                if (!hasData) {
+                    Logger.w(TAG, "Existing files are empty - will re-download")
+                    return checkInternetConnectivity()
+                }
+
+                Logger.d(TAG, "Files contain data - checking for unsaved changes...")
+
+                // Check for unsaved changes
+                val hasChangesResult = manageESFacade.hasUnsyncedChanges()
+                val hasChanges = hasChangesResult.getOrElse { false }
+
+                if (hasChanges) {
+                    Logger.w(TAG, "Unsaved changes detected - showing Proceed/Cancel dialog")
+                    showProceedCancelDialog()
+                    return false // Block download until user makes choice
+                }
+
+                Logger.d(TAG, "No unsaved changes - safe to proceed")
+                return checkInternetConnectivity()
+            }
+
+            else -> {
+                Logger.e(TAG, "Unexpected file count: $fileCount")
+                return false
+            }
+        }
+    }
+
+    /**
+     * Checks internet connectivity before download.
+     *
+     * @return true if connected, false if offline (shows error)
+     */
+    private fun checkInternetConnectivity(): Boolean {
+        if (!networkMonitor.isCurrentlyConnected()) {
+            Logger.e(TAG, "Pre-flight check failed: No internet connection")
+            _uiState.update {
+                it.copy(downloadError = "No internet connection. Please check your network.")
+            }
+            return false
+        }
+        Logger.d(TAG, "✓ Internet connectivity check passed")
+        return true
+    }
+
+    /**
+     * Shows the Proceed/Cancel dialog when user attempts download with unsaved changes.
+     */
+    fun showProceedCancelDialog() {
+        Logger.d(TAG, "Showing Proceed/Cancel dialog for unsaved changes")
+        _uiState.update { it.copy(activeDialog = ManageESDialog.ProceedCancelDownload) }
+    }
+
+    /**
+     * Shows the No Data error dialog when downloaded geodatabase is empty.
+     */
+    fun showNoDataDialog() {
+        Logger.e(TAG, "Showing No Data error dialog - downloaded geodatabase is empty")
+        _uiState.update { it.copy(activeDialog = ManageESDialog.NoData) }
+    }
+
+    /**
+     * Shows the Corrupted File error dialog when geodatabase cannot be loaded.
+     */
+    fun showCorruptedFileDialog() {
+        Logger.e(TAG, "Showing Corrupted File error dialog - geodatabase load failed")
+        _uiState.update { it.copy(activeDialog = ManageESDialog.CorruptedFile) }
+    }
+
+    /**
+     * Dismisses the currently active dialog.
+     */
+    fun dismissDialog() {
+        val currentDialog = _uiState.value.activeDialog
+        Logger.d(TAG, "Dismissing dialog: ${currentDialog::class.simpleName}")
+        _uiState.update { it.copy(activeDialog = ManageESDialog.None) }
+    }
+
+    /**
+     * Handles primary action for the currently active dialog.
+     *
+     * Delegates to appropriate handler based on dialog type:
+     * - NoData: Performs silent clear and dismisses
+     * - CorruptedFile: Simply dismisses (admin contact required)
+     * - ProceedCancelDownload: Dismisses and proceeds with download
+     */
+    fun onDialogPrimaryAction() {
+        when (val dialog = _uiState.value.activeDialog) {
+            is ManageESDialog.NoData -> {
+                Logger.i(TAG, "User confirmed No Data dialog - performing silent clear")
+                performSilentClearAndDismiss()
+            }
+
+            is ManageESDialog.CorruptedFile -> {
+                Logger.d(TAG, "User dismissed Corrupted File dialog")
+                dismissDialog()
+            }
+
+            is ManageESDialog.ProceedCancelDownload -> {
+                Logger.i(TAG, "User chose to proceed with download despite unsaved changes")
+                dismissDialog()
+                // Note: Actual download will be triggered by UI after dialog dismisses
+            }
+
+            ManageESDialog.None -> {
+                Logger.v(TAG, "Primary action called but no dialog active")
+            }
+        }
+    }
+
+    /**
+     * Handles secondary action (Cancel) for dialogs that support it.
+     * Currently only ProceedCancelDownload has a secondary action.
+     */
+    fun onDialogSecondaryAction() {
+        when (val dialog = _uiState.value.activeDialog) {
+            is ManageESDialog.ProceedCancelDownload -> {
+                Logger.d(TAG, "User cancelled download to sync changes first")
+                dismissDialog()
+            }
+
+            else -> {
+                Logger.v(TAG, "Secondary action called but dialog doesn't support it")
+            }
+        }
+    }
+
+    /**
+     * Performs silent clear of geodatabases and dismisses dialog.
+     *
+     * This is called when user clicks OK on the No Data dialog.
+     * Geodatabases are deleted without showing "Files deleted" Snackbar,
+     * allowing the user to immediately retry the download.
+     */
+    private fun performSilentClearAndDismiss() {
+        viewModelScope.launch {
+            Logger.d(TAG, "Starting silent clear operation")
+
+            val result = manageESFacade.clearGeodatabases()
+
+            result.onSuccess { count ->
+                Logger.i(TAG, "Silent clear complete: $count file(s) deleted")
+            }.onFailure { error ->
+                Logger.e(TAG, "Silent clear failed", error)
+            }
+
+            // Dismiss dialog regardless of result
+            dismissDialog()
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         Logger.d(TAG, "ManageESViewModel cleared")
@@ -882,10 +1306,108 @@ class ManageESViewModel @Inject constructor(
 }
 
 /**
+ * Sealed class representing dialog states for ManageES feature.
+ *
+ * ## Design Rationale: Sealed Class vs Separate Booleans
+ *
+ * **Why Sealed Class:**
+ * Using a sealed class provides better state management compared to separate boolean flags:
+ *
+ * 1. **Type Safety:** Impossible to show multiple dialogs simultaneously
+ *    - With booleans: `showDialog1 = true, showDialog2 = true` → undefined behavior
+ *    - With sealed class: Only one variant active at a time
+ *
+ * 2. **Exhaustive When:** Compiler enforces handling all dialog types
+ *    ```kotlin
+ *    when (activeDialog) {
+ *        ManageESDialog.None -> { }
+ *        ManageESDialog.ProceedCancelDownload -> { }  // Must handle
+ *        ManageESDialog.NoData -> { }                 // Must handle
+ *        ManageESDialog.CorruptedFile -> { }          // Must handle
+ *    }
+ *    ```
+ *
+ * 3. **Single Source of Truth:** One field instead of multiple booleans
+ *    - Cleaner state: `activeDialog = ManageESDialog.NoData`
+ *    - Easier debugging: Clear which dialog is active
+ *    - Simpler testing: `uiState.activeDialog is ManageESDialog.NoData`
+ *
+ * 4. **Scalability:** Adding new dialogs is simple
+ *    - Add new sealed class variant
+ *    - Compiler shows where to add handling
+ *    - No risk of conflicting boolean states
+ *
+ * 5. **Clear Intent:** Dialog state is explicit in code
+ *    - `activeDialog = ManageESDialog.ProceedCancelDownload` is self-documenting
+ *    - Better than `showDialog1 = true` (which dialog is 1?)
+ *
+ * **Dialog Types:**
+ * - **None:** No dialog displayed (default state)
+ * - **ProceedCancelDownload:** Warn user about unsaved changes before download
+ * - **NoData:** Error when downloaded geodatabase contains no features
+ * - **CorruptedFile:** Error when geodatabase file is corrupted or unreadable
+ *
+ * **Side Effects Handled in ViewModel:**
+ * Each dialog's actions are handled by ViewModel methods, keeping state clean:
+ * - NoData → Performs silent clear on dismiss
+ * - ProceedCancelDownload → Proceeds with download or cancels
+ * - CorruptedFile → Simply dismisses (administrator contact required)
+ *
+ * @author Sathya Narayanan
+ */
+sealed class ManageESDialog {
+    /**
+     * No dialog is currently displayed.
+     * This is the default state.
+     */
+    data object None : ManageESDialog()
+
+    /**
+     * Dialog shown when user attempts to download but has unsaved local edits.
+     * Allows user to proceed (losing changes) or cancel to sync first.
+     *
+     * Actions:
+     * - Primary (Proceed): Continue with download, overwriting local changes
+     * - Secondary (Cancel): Dismiss dialog, user can sync manually
+     */
+    data object ProceedCancelDownload : ManageESDialog()
+
+    /**
+     * Error dialog shown when downloaded geodatabase contains no data.
+     * This indicates a server issue or incorrect extent selection.
+     *
+     * Actions:
+     * - Primary (OK): Dismisses dialog and triggers silent clear of empty geodatabase
+     *
+     * Rationale for Silent Clear:
+     * Empty geodatabases serve no purpose and consume storage. Automatically
+     * removing them prevents confusion and allows immediate retry without manual cleanup.
+     */
+    data object NoData : ManageESDialog()
+
+    /**
+     * Error dialog shown when geodatabase file is corrupted or cannot be loaded.
+     * This requires administrator intervention to investigate root cause.
+     *
+     * Actions:
+     * - Primary (OK): Dismisses dialog
+     *
+     * Possible Causes:
+     * - Network interruption during download
+     * - Disk write errors
+     * - Insufficient storage during download
+     * - File system corruption
+     * - Incompatible geodatabase version
+     */
+    data object CorruptedFile : ManageESDialog()
+}
+
+/**
  * UI State for Manage ES screen.
  *
  * Enhanced for multi-service support with separate fields for single and multi-service downloads.
  * Includes sync warning state for data loss prevention.
+ * Uses sealed class for type-safe dialog management.
  */
 data class ManageESUiState(
     // Distance selection - null indicates no selection
@@ -924,5 +1446,8 @@ data class ManageESUiState(
     // Sync warning state (data loss prevention)
     val showSyncWarningBeforeDownload: Boolean = false,
     val isSyncingBeforeDownload: Boolean = false,
-    val syncBeforeDownloadError: String? = null
+    val syncBeforeDownloadError: String? = null,
+
+    // Dialog management using sealed class (type-safe, single source of truth)
+    val activeDialog: ManageESDialog = ManageESDialog.None
 )

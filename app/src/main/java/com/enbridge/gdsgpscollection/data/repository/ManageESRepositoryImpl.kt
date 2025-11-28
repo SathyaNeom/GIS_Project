@@ -1442,4 +1442,199 @@ class ManageESRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /**
+     * Returns the count of geodatabase files matching configured services.
+     *
+     * Only counts files that match the current environment's service IDs to avoid
+     * counting orphaned files from previous configurations or temporary files.
+     *
+     * Implementation:
+     * 1. Get current environment configuration
+     * 2. For each configured service, check if file exists
+     * 3. Count existing files
+     * 4. Return total count
+     *
+     * @return Count of geodatabase files (0 or positive integer)
+     */
+    override suspend fun getGeodatabaseFileCount(): Int {
+        return try {
+            Logger.d(TAG, "Counting geodatabase files")
+
+            val environment = configuration.getCurrentEnvironment()
+            var fileCount = 0
+
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+
+                if (geodatabaseFile.exists()) {
+                    fileCount++
+                    Logger.d(
+                        TAG,
+                        "Found geodatabase file: ${service.id}.geodatabase (${geodatabaseFile.length() / 1024}KB)"
+                    )
+                }
+            }
+
+            Logger.i(TAG, "Geodatabase file count: $fileCount")
+            fileCount
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error counting geodatabase files", e)
+            0 // Return 0 on error (safe default)
+        }
+    }
+
+    /**
+     * Checks if existing geodatabases contain actual feature data.
+     *
+     * Validates that at least one feature table in at least one geodatabase
+     * contains features. Empty geodatabases indicate failed or incomplete downloads.
+     *
+     * Implementation Strategy:
+     * 1. Load all existing geodatabases
+     * 2. For each geodatabase, iterate through feature tables
+     * 3. Use queryFeatureCount() for O(1) metadata check (fast)
+     * 4. Return true immediately if any table has features (fail-fast)
+     * 5. Return false if all tables in all geodatabases are empty
+     *
+     * Performance:
+     * Uses queryFeatureCount() instead of loading features, querying geodatabase
+     * metadata rather than scanning actual data. This provides instant results
+     * even for large geodatabases.
+     *
+     * @return Result<Boolean> - true if data exists, false if all empty
+     */
+    override suspend fun hasDataToLoad(): Result<Boolean> {
+        return try {
+            Logger.i(TAG, "Checking if geodatabases contain feature data")
+
+            val environment = configuration.getCurrentEnvironment()
+            var hasData = false
+
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+
+                // Skip non-existent files
+                if (!geodatabaseFile.exists()) {
+                    Logger.d(TAG, "Geodatabase ${service.id} does not exist, skipping")
+                    continue
+                }
+
+                Logger.d(TAG, "Loading geodatabase ${service.id} to check data")
+
+                val geodatabase = Geodatabase(servicePath)
+                val loadResult = geodatabase.load()
+
+                if (loadResult.isFailure) {
+                    Logger.e(
+                        TAG,
+                        "Failed to load geodatabase ${service.id}",
+                        loadResult.exceptionOrNull()
+                    )
+                    geodatabase.close()
+                    continue
+                }
+
+                // Check each feature table for data
+                for (featureTable in geodatabase.featureTables) {
+                    try {
+                        // Load table to access metadata
+                        featureTable.load().getOrThrow()
+
+                        // Query feature count using empty QueryParameters (gets all features count)
+                        // This is an O(1) metadata operation that doesn't load actual features
+                        val queryParameters = com.arcgismaps.data.QueryParameters().apply {
+                            whereClause = "1=1" // Return all features
+                        }
+                        val featureCountResult = featureTable.queryFeatureCount(queryParameters)
+                        val featureCount = featureCountResult.getOrElse { 0L }
+
+                        if (featureCount > 0) {
+                            Logger.i(
+                                TAG,
+                                "Found data: ${featureTable.tableName} has $featureCount features"
+                            )
+                            hasData = true
+                            geodatabase.close()
+                            // Fail-fast: found data, return immediately
+                            return Result.success(true)
+                        } else {
+                            Logger.d(
+                                TAG,
+                                "Table ${featureTable.tableName} is empty (0 features)"
+                            )
+                        }
+                        } catch (e: Exception) {
+                        Logger.e(TAG, "Error checking table ${featureTable.tableName}", e)
+                        // Continue checking other tables
+                    }
+                }
+
+                geodatabase.close()
+            }
+
+            Logger.i(TAG, "Data check complete: hasData=$hasData")
+            Result.success(hasData)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error checking for data in geodatabases", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Clears all geodatabase files silently (no UI notifications).
+     *
+     * Used for automatic cleanup operations:
+     * - After "No Data" error (remove empty files)
+     * - Recovery from corrupted state
+     *
+     * Implementation:
+     * 1. Get current environment configuration
+     * 2. For each service, delete geodatabase file if exists
+     * 3. Count deleted files
+     * 4. Log operations but don't trigger UI notifications
+     *
+     * @return Result<Int> - Count of deleted files
+     */
+    override suspend fun clearGeodatabases(): Result<Int> {
+        return try {
+            Logger.i(TAG, "Starting silent geodatabase clear operation")
+
+            val environment = configuration.getCurrentEnvironment()
+            var deletedCount = 0
+
+            for (service in environment.featureServices) {
+                val servicePath = getGeodatabasePath(service.id)
+                val geodatabaseFile = File(servicePath)
+
+                if (geodatabaseFile.exists()) {
+                    val fileSize = geodatabaseFile.length() / 1024 // KB
+                    val deleted = geodatabaseFile.delete()
+
+                    if (deleted) {
+                        deletedCount++
+                        Logger.d(
+                            TAG,
+                            "Deleted geodatabase: ${service.id}.geodatabase (${fileSize}KB)"
+                        )
+                    } else {
+                        Logger.w(TAG, "Failed to delete geodatabase: ${service.id}.geodatabase")
+                    }
+                } else {
+                    Logger.d(TAG, "Geodatabase ${service.id} does not exist, skipping")
+                }
+            }
+
+            Logger.i(TAG, "Silent clear complete: deleted $deletedCount file(s)")
+            Result.success(deletedCount)
+
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error during silent geodatabase clear", e)
+            Result.failure(e)
+        }
+    }
 }

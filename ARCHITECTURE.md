@@ -2831,6 +2831,8 @@ application is structured using Clean Architecture principles with MVVM pattern.
 
 - Review [TESTING_GUIDE.md](TESTING_GUIDE.md) for testing practices
 - Check [QUICK_START.md](QUICK_START.md) for development setup
+- See [docs/GPS_ACCURACY_IMPLEMENTATION.md](docs/GPS_ACCURACY_IMPLEMENTATION.md) for GPS accuracy
+  tracking details
 - Consult [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations
 - Reference [docs/FUTURE_UPGRADES.md](docs/FUTURE_UPGRADES.md) for planned enhancements
 

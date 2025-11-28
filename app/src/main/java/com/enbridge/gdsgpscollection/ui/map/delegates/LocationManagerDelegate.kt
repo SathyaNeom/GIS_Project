@@ -118,6 +118,85 @@ interface LocationManagerDelegate {
     val isLocationAvailable: StateFlow<Boolean>
 
     /**
+     * StateFlow containing the current GPS horizontal accuracy in meters.
+     * Emits null if accuracy information is unavailable.
+     *
+     * ## Current Implementation (Phase 1):
+     * Sources accuracy from ArcGIS Location.horizontalAccuracy property, which provides:
+     * - Standard GPS accuracy (typically 5-15 meters)
+     * - Updates whenever the LocationDataSource emits new location data
+     * - Null when GPS is still acquiring fix or no location available
+     *
+     * ## Rationale for Current Design:
+     * Using ArcGIS Location.horizontalAccuracy provides a simple, SDK-integrated solution
+     * that works with any LocationDataSource (simulated, system GPS, or custom).
+     * This approach:
+     * - Requires no additional hardware integration for MVP
+     * - Works seamlessly with existing location flow architecture
+     * - Provides sufficient accuracy data for basic pre-flight checks
+     *
+     * ## Future Enhancement: External GNSS Integration (Phase 2):
+     * When integrating external GNSS receivers (Bluetooth GPS, NMEA devices):
+     *
+     * **Why Enhanced Accuracy Matters:**
+     * External GNSS receivers provide:
+     * - Sub-meter accuracy with DGPS/RTK corrections (0.5-2 meters)
+     * - Real-time DOP (Dilution of Precision) metrics (HDOP, VDOP, PDOP)
+     * - Satellite constellation health and signal strength
+     * - Fix quality indicators (GPS, DGPS, RTK Fixed/Float)
+     *
+     * **Architectural Evolution:**
+     * Instead of just `horizontalAccuracy: Float?`, we'll expand to:
+     * ```kotlin
+     * val gnssMetadata: StateFlow<GnssMetadata?>
+     *
+     * data class GnssMetadata(
+     *     val horizontalAccuracy: Float,
+     *     val verticalAccuracy: Float?,
+     *     val hdop: Float?,           // Horizontal Dilution of Precision
+     *     val vdop: Float?,           // Vertical Dilution of Precision
+     *     val pdop: Float?,           // Position Dilution of Precision
+     *     val fixQuality: GnssFixQuality,  // NO_FIX, GPS, DGPS, RTK_FIXED, etc.
+     *     val satelliteCount: Int,
+     *     val nmeaSentences: List<String>?,
+     *     val receiverInfo: ExternalReceiverInfo?
+     * )
+     * ```
+     *
+     * **Implementation Path:**
+     * 1. Current: Use NmeaLocationDataSource to parse NMEA sentences from external receiver
+     * 2. Parse NMEA sentences ($GPGGA, $GPGSA, $GPGSV) to extract detailed metadata
+     * 3. ArcGIS Location will still provide basic horizontalAccuracy
+     * 4. Our custom parsing extracts additional DOP values and quality indicators
+     * 5. Expose rich metadata via new `gnssMetadata` flow
+     *
+     * **Backwards Compatibility:**
+     * - `currentAccuracy` flow remains for simple accuracy checks
+     * - New `gnssMetadata` flow provides comprehensive data for advanced use cases
+     * - Components can choose which level of detail they need
+     *
+     * **UI Benefits:**
+     * With rich GNSS data, we can:
+     * - Show real-time accuracy percentage bars (e.g., "GPS: 98% accurate")
+     * - Display satellite count and constellation health
+     * - Color-code accuracy badges (green: RTK, yellow: DGPS, orange: GPS)
+     * - Implement adaptive accuracy thresholds based on fix quality
+     * - Show connection status for external receivers
+     *
+     * **Pre-flight Check Evolution:**
+     * Current: `if (accuracy > 7.0f) → reject`
+     * Future:  `if (fixQuality == RTK && accuracy > 2.0f) → reject`
+     *          `if (fixQuality == DGPS && accuracy > 5.0f) → reject`
+     *          `if (fixQuality == GPS && accuracy > 7.0f) → reject`
+     *
+     * This phased approach allows immediate implementation while preserving
+     * architectural flexibility for future GNSS enhancements.
+     *
+     * @see updateCurrentAccuracy For updating accuracy from location data
+     */
+    val currentAccuracy: StateFlow<Float?>
+
+    /**
      * Creates and configures a LocationDataSource for displaying user location.
      *
      * ## Current Behavior:
@@ -180,4 +259,27 @@ interface LocationManagerDelegate {
      * @param location The new location point, or null if unavailable
      */
     fun updateCurrentLocation(location: Point?)
+
+    /**
+     * Updates the current GPS accuracy value.
+     * This should be called by the UI layer when location accuracy updates are received
+     * from the ArcGIS Location Flow.
+     *
+     * ## Current Usage:
+     * Called from MainMapScreen when collecting locationDisplay.location:
+     * ```kotlin
+     * locationDisplay.location.collect { location ->
+     *     val accuracy = location?.horizontalAccuracy?.toFloat()
+     *     mainMapViewModel.updateCurrentAccuracy(accuracy)
+     * }
+     * ```
+     *
+     * ## Future Enhancement:
+     * When using external GNSS with NmeaLocationDataSource, this method will still
+     * receive accuracy from ArcGIS Location, but we'll additionally parse NMEA
+     * sentences for enhanced metadata (DOP values, fix quality, satellite count).
+     *
+     * @param accuracy Horizontal accuracy in meters, or null if unavailable
+     */
+    fun updateCurrentAccuracy(accuracy: Float?)
 }
